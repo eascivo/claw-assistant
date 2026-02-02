@@ -10,19 +10,23 @@ constitution:
   forbid: []   # 例如: ["delete_user_data"]
   allow: []
   restrict: []  # 例如: [{ action: "content", require_human: true }]
-  # 意图偏差分：enabled 且 score > threshold 则拦截；stub_score 仅测试用；provider=zhipu 时用智谱（需 env）
+  # 意图偏差分：enabled 且 score > threshold 则拦截；当前支持 provider=zhipu（智谱 AI）
   intent_deviation:
     enabled: false
     threshold: 0.5
     # stub_score: 0.0   # 测试时设为 1.0 可强制拦截
-    # provider: zhipu   # 启用智谱算分时填写；需环境变量 ZHIPUAI_API_KEY
+    # provider: zhipu   # 智谱 AI；需环境变量 ZHIPUAI_API_KEY
     # base_url: ""     # 可选，覆盖智谱 base_url（否则用 env ZHIPUAI_BASE_URL 或默认）
     # model: glm-4-flash
+    # 扩展选项：接其他 LLM 时在 governance/intent_deviation.py 新增 intent_deviation_score_xxx，
+    # 在 governance/hooks.py 的 _intent_deviation_score 中按 provider 分支调用即可；如 provider: openai 需自实现并配置 OPENAI_API_KEY
 
-# World Checkpoint：偏差阈值与延时（秒）
+# World Checkpoint：偏差阈值与延时（秒）；复盘可持久化到本地 JSONL
 checkpoint:
   threshold: 0.5    # 相对偏差超过此值则写复盘
-  delay_seconds: 0 # 0=立即校验，>0=延时后校验
+  delay_seconds: 0  # 0=立即校验，>0=延时后校验
+  # postmortem_sink: memory  # memory=仅内存（默认）；file=同时追加到 JSONL 文件
+  # postmortem_file_path: postmortems.jsonl  # sink=file 时写入路径，便于后续扩展为 DB/长期记忆
 
 # channel：experimental 默认免审批（仅执行并记录），main 仍按 limb require_approval
 channels:

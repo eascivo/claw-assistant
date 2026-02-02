@@ -1,7 +1,9 @@
 """World Checkpoint：延时校验、偏差计算、复盘写入。"""
 
 import asyncio
+import json
 import logging
+from pathlib import Path
 from typing import Any, Callable
 
 from claw_assistant.config import get_limb_config, load_config
@@ -14,6 +16,8 @@ ValidatorFn = Callable[[str, dict[str, Any], dict[str, Any]], dict[str, Any] | N
 
 _validators: dict[str, ValidatorFn] = {}
 _postmortems: list[dict[str, Any]] = []
+
+DEFAULT_POSTMORTEM_FILE = "postmortems.jsonl"
 
 
 def register_validator(name: str, fn: ValidatorFn) -> None:
@@ -39,6 +43,7 @@ def _write_postmortem(
     deviation: float,
     params: dict[str, Any],
     result: dict[str, Any],
+    config: dict[str, Any] | None = None,
 ) -> None:
     entry = {
         "tool_name": tool_name,
@@ -60,6 +65,17 @@ def _write_postmortem(
         task_id,
         deviation,
     )
+    # 可选：持久化到本地 JSONL 文件，便于后续扩展为 DB/长期记忆
+    if config:
+        cfg = config.get("checkpoint") or {}
+        if cfg.get("postmortem_sink") == "file":
+            path_str = cfg.get("postmortem_file_path") or DEFAULT_POSTMORTEM_FILE
+            path = Path(path_str)
+            try:
+                with path.open("a", encoding="utf-8") as f:
+                    f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+            except OSError as e:
+                logger.warning("postmortem file append failed: %s", e)
 
 
 def deviation(expected: float, actual: float) -> float:
@@ -114,6 +130,7 @@ async def run_checkpoint(
             deviation_val,
             params,
             result,
+            config=config,
         )
     return {
         "deviation": deviation_val,

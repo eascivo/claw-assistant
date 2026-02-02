@@ -176,11 +176,12 @@ claw-assistant/
 
 **每完成一个阶段或重大功能后，在此更新「下一步规划」小节。**
 
-### Phase 2 收尾（可选）
+### 已迭代：intent_deviation 接智谱 AI
 
 | 内容 | 说明 |
 |------|------|
-| **intent_deviation 接 LLM** | constitution.intent_deviation.provider=openai 等时调用 LLM 算意图偏差分；需 API key 与依赖。 |
+| **当前支持** | `provider: zhipu` 时调用智谱 Chat Completions 算意图偏差分；需环境变量 `ZHIPUAI_API_KEY`；`base_url` / `model` 可配置。 |
+| **扩展选项** | 接其他 LLM（如 OpenAI）时：在 `governance/intent_deviation.py` 新增 `intent_deviation_score_xxx(tool_name, params, config)`，在 `governance/hooks.py` 的 `_intent_deviation_score` 中按 `provider` 分支调用；配置中增加 `provider: openai` 及对应 base_url/model/env 说明即可。 |
 
 ### 已迭代：intent → tool 映射
 
@@ -191,8 +192,16 @@ claw-assistant/
 | **API / CLI** | `tool` 可选；省略时由服务端按 intent_tool_map 推断；显式传 tool 则覆盖。 |
 | **验收** | 单测 test_config.resolve_tool_from_intent_*、test_task_flow_tool_inferred_from_intent；集成 test_run_tool_inferred_from_intent。 |
 
+### 已迭代：复盘持久化（自动复盘小步）
+
+| 内容 | 说明 |
+|------|------|
+| **checkpoint.postmortem_sink** | `memory`（默认，仅内存）或 `file`；`file` 时复盘同时追加到 JSONL 文件。 |
+| **checkpoint.postmortem_file_path** | sink=file 时写入路径，默认 `postmortems.jsonl`；便于后续扩展为 DB/长期记忆。 |
+| **验收** | 单测 test_run_checkpoint_postmortem_file_sink；GET /postmortems 仍读内存，文件为持久化备份。 |
+
 ### Phase 3 再往后
 
 - **多 Limb 增强**：更多 limbs 注册与路由、intent_tool_map 扩展。
-- **自动复盘**：World Checkpoint 回写长期记忆、收益指标与告警。
+- **自动复盘扩展**：从 JSONL 加载/合并到 API、收益指标与告警。
 - **商业闭环稳定**：可观测、可回放、可收敛。
