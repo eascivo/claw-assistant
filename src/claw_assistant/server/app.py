@@ -52,6 +52,25 @@ def create_app(config: dict[str, Any] | None = None) -> FastAPI:
         """健康检查，供负载均衡/监控探测。"""
         return {"status": "ok"}
 
+    @app.get("/metrics")
+    async def api_metrics() -> dict[str, Any]:
+        """基础指标，供监控/可观测；含 postmortem_total、pending_count、postmortem_last_24h。"""
+        import time
+
+        run_config = getattr(app.state, "config", None) or load_config()
+        postmortems = get_postmortems(run_config)
+        total = len(postmortems)
+        now = time.time()
+        cutoff_24h = now - 86400.0
+        last_24h = sum(1 for e in postmortems if e.get("created_at", 0) >= cutoff_24h)
+        manager: ApprovalManager = app.state.approval_manager
+        pending = await manager.list_pending()
+        return {
+            "postmortem_total": total,
+            "postmortem_last_24h": last_24h,
+            "pending_count": len(pending),
+        }
+
     @app.post("/run")
     async def api_run(body: RunBody) -> dict[str, Any]:
         """发起一次任务流；若需审批会挂起直到 approve/reject。channel=experimental 为 Brain-B 影子；tool 省略时按 intent 推断 limb。"""

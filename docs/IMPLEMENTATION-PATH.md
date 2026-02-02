@@ -261,7 +261,14 @@ claw-assistant/
 | **GET /health** | 健康检查，返回 `{ "status": "ok" }`，供负载均衡/监控探测。 |
 | **验收** | 集成测 test_get_health。 |
 
+### 已迭代：GET /metrics 基础指标
+
+| 内容 | 说明 |
+|------|------|
+| **GET /metrics** | 返回 `postmortem_total`、`postmortem_last_24h`、`pending_count`，供监控/可观测。 |
+| **验收** | 集成测 test_get_metrics。 |
+
 ### Phase 3 再往后
 
 - **多 Limb 增强**：更多 limbs 注册、intent_tool_map 扩展。
-- **商业闭环稳定**：可回放、可收敛；可观测可扩展（如 GET /metrics）。
+- **商业闭环稳定**：可回放、可收敛；可观测可继续扩展（如 events_count、run_count 等）。

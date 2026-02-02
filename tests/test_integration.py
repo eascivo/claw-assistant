@@ -17,6 +17,23 @@ async def test_get_health(app) -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_metrics(app) -> None:
+    """GET /metrics 返回基础指标：postmortem_total、pending_count、postmortem_last_24h。"""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
+        r = await client.get("/metrics")
+    assert r.status_code == 200
+    data = r.json()
+    assert "postmortem_total" in data
+    assert "postmortem_last_24h" in data
+    assert "pending_count" in data
+    assert isinstance(data["postmortem_total"], int)
+    assert isinstance(data["postmortem_last_24h"], int)
+    assert isinstance(data["pending_count"], int)
+    assert data["postmortem_last_24h"] <= data["postmortem_total"]
+
+
+@pytest.mark.asyncio
 async def test_run_then_approve_flow(app) -> None:
     """POST /run 挂起 → GET /status 有记录 → POST /approve 解挂 → /run 返回成功。"""
     transport = ASGITransport(app=app)
