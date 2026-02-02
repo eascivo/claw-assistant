@@ -3,6 +3,7 @@
 import json
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from claw_assistant.governance.checkpoint import (
@@ -96,6 +97,29 @@ async def test_run_checkpoint_postmortem_alert_event() -> None:
     assert len(alert_events) >= 1
     assert alert_events[0]["payload"]["total"] >= 1
     assert alert_events[0]["payload"]["threshold"] == 1
+
+
+@pytest.mark.asyncio
+async def test_run_checkpoint_alert_webhook_called() -> None:
+    """复盘告警触发且配置 alert_webhook_url 时，POST 到该 URL。"""
+    clear_postmortems()
+    config = {
+        "limbs": {"content": {"checkpoint": "content_stub"}},
+        "checkpoint": {
+            "threshold": 0.5,
+            "alert_after_postmortem_count": 1,
+            "alert_webhook_url": "http://test.example/alert",
+        },
+    }
+    params = {"expectedWorldState": 100}
+    result = {"ok": True, "mock_actual": 40}
+    with patch("claw_assistant.governance.checkpoint.httpx.post") as mock_post:
+        mock_post.return_value.status_code = 200
+        await run_checkpoint("content", params, result, "t-webhook", config)
+    mock_post.assert_called_once()
+    call_args = mock_post.call_args
+    assert call_args[0][0] == "http://test.example/alert"
+    assert call_args[1]["json"] == {"event": "postmortem_alert", "total": 1, "threshold": 1}
 
 
 @pytest.mark.asyncio

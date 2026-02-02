@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
+import httpx
 from claw_assistant.config import get_limb_config, load_config
 from claw_assistant.governance.events import append_event
 
@@ -73,6 +74,16 @@ def clear_postmortems() -> None:
     _postmortems.clear()
 
 
+def _send_alert_webhook(url: str, payload: dict[str, Any]) -> None:
+    """POST 告警到 Webhook URL；失败仅打 log，不抛异常。"""
+    try:
+        resp = httpx.post(url, json=payload, timeout=5.0)
+        if resp.status_code >= 400:
+            logger.warning("alert webhook returned %s: %s", resp.status_code, resp.text[:200])
+    except Exception as e:
+        logger.warning("alert webhook failed: %s", e)
+
+
 def load_postmortems_from_file_into_memory(config: dict[str, Any] | None = None) -> int:
     """
     将 JSONL 文件中的复盘加载到内存（可选启动时调用）。
@@ -136,6 +147,13 @@ def _write_postmortem(
                 n = int(alert_threshold)
                 if len(_postmortems) >= n:
                     append_event("postmortem_alert", {"total": len(_postmortems), "threshold": n})
+                    # 可选：告警渠道 Webhook
+                    webhook_url = cfg.get("alert_webhook_url")
+                    if webhook_url and isinstance(webhook_url, str) and webhook_url.strip():
+                        _send_alert_webhook(
+                            webhook_url.strip(),
+                            {"event": "postmortem_alert", "total": len(_postmortems), "threshold": n},
+                        )
             except (TypeError, ValueError):
                 pass
 

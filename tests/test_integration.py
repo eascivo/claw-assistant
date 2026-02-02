@@ -54,6 +54,22 @@ async def test_get_convergence_suggestions(app) -> None:
 
 
 @pytest.mark.asyncio
+async def test_app_with_alert_webhook_config() -> None:
+    """含 checkpoint.alert_webhook_url 的 config 下 app 正常响应。"""
+    from claw_assistant.server.app import create_app
+
+    from tests.conftest import TEST_CONFIG
+
+    config = {**TEST_CONFIG, "checkpoint": {**TEST_CONFIG["checkpoint"], "alert_webhook_url": "http://example.com/webhook"}}
+    app = create_app(config=config)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
+        r = await client.get("/metrics")
+    assert r.status_code == 200
+    assert "run_count" in r.json()
+
+
+@pytest.mark.asyncio
 async def test_run_then_approve_flow(app) -> None:
     """POST /run 挂起 → GET /status 有记录 → POST /approve 解挂 → /run 返回成功。"""
     transport = ASGITransport(app=app)
