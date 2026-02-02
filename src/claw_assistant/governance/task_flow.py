@@ -6,6 +6,7 @@ from typing import Any
 
 from claw_assistant.config import get_channel_config, get_limb_config, load_config, resolve_tool_from_intent
 from claw_assistant.governance.approval import ApprovalManager
+from claw_assistant.im.notifier import get_notifier
 from claw_assistant.governance.checkpoint import schedule_checkpoint
 from claw_assistant.governance.events import append_event
 from claw_assistant.governance.hooks import after_tool_call, before_tool_call
@@ -56,6 +57,7 @@ async def run_task_flow(
             task_id=task_id,
             risk=limb_cfg.get("risk"),
         )
+        get_notifier(config).send_approval_request(**pending.to_public())
         decision = await approval_manager.wait(pending.approval_id)
         if decision == "reject":
             return {"ok": False, "error": "rejected by human"}

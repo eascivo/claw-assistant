@@ -285,6 +285,16 @@ claw-assistant/
 | **_send_alert_webhook(url, payload)** | `governance/checkpoint.py`：httpx.post(url, json=payload, timeout=5.0)；4xx/5xx 或异常仅 logger.warning。 |
 | **验收** | 单测 test_run_checkpoint_alert_webhook_called（patch httpx.post 断言调用）；集成测 test_app_with_alert_webhook_config；config.example 注释示例。 |
 
+### 已迭代：IM 预留接口（发送审批通知 + Feishu stub）
+
+| 内容 | 说明 |
+|------|------|
+| **IMNotifier 协议** | `im/notifier.py`：send_approval_request(approval_id, task_id, tool_name, summary, risk)；飞书/钉钉/Discord 按同一接口实现。 |
+| **get_notifier(config)** | 根据 config.im.provider（feishu \| 空）返回 FeishuNotifier 或 NoOpNotifier；未配置则不推送。 |
+| **FeishuNotifier** | stub：占位实现，可读 im.feishu.webhook_url；当前 send_approval_request 仅 log，后续接 Webhook 或发消息 API。 |
+| **task_flow** | 审批 register 后调用 get_notifier(config).send_approval_request(**pending.to_public())，不阻塞。 |
+| **验收** | 单测 test_im.get_notifier_*、send_approval_request 不崩溃；config.example 注释 im.provider、im.feishu.webhook_url。 |
+
 ### 已迭代：新增 Limb 文档说明
 
 | 内容 | 说明 |
@@ -384,6 +394,6 @@ claw-assistant/
 ### 下一步规划（当前）
 
 - **Phase 3 收尾已完成**：回放 UI、可收敛小步、监控扩展、告警渠道 Webhook 均已完成。
-- **IM Bot**：**飞书先行**，钉钉、Discord 等可选适配、**预留统一接口**（发送审批/待办通知、解析用户审批指令、配置抽象）。飞书集成测试所需（凭证、事件订阅、公网 URL、权限等）见 [docs/FEISHU-INTEGRATION.md](FEISHU-INTEGRATION.md)。
+- **IM 预留接口已完成**：IMNotifier、get_notifier、FeishuNotifier stub；审批挂起时可选调用 send_approval_request。**飞书实装**：接 Webhook 或发消息 API、解析用户审批指令（事件订阅）待做；所需见 [FEISHU-INTEGRATION.md](FEISHU-INTEGRATION.md)。
 - **OpenClaw**：仍在准备中，暂不列入近期必做；准备就绪后再按 Roadmap 方向 A 排期。
 - **之后可选**：Dashboard 展示 GET /convergence/suggestions、可收敛扩展（写回 config/自动调参）等。

@@ -30,6 +30,12 @@ checkpoint:
   # alert_after_postmortem_count: 10  # 可选；复盘条数 >= 此值时 summary.alert 为 true，供告警用
   # alert_webhook_url: "https://your-webhook.example/alert"  # 可选；复盘告警触发时 POST JSON（event/postmortem_alert, total, threshold）
 
+# IM 通知预留：飞书先行，钉钉/Discord 等按同一接口扩展；审批挂起时可选推送到 IM
+# im:
+#   provider: feishu   # feishu | 空=不推送
+#   feishu:
+#     webhook_url: "https://open.feishu.cn/open-apis/bot/v2/hook/xxx"  # 自定义机器人 Webhook（可选，当前 stub 仅 log）
+
 # channel：experimental 默认免审批（仅执行并记录），main 仍按 limb require_approval
 channels:
   experimental:
