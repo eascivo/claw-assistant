@@ -28,6 +28,11 @@ def get_events(since_ts: float | None = None, limit: int = 200) -> list[dict[str
     return out[-limit:] if limit else out
 
 
+def get_events_count() -> int:
+    """返回当前事件总数，供 GET /metrics 等可观测用。"""
+    return len(_events)
+
+
 def clear_events() -> None:
     """清空事件（仅测试用）。"""
     global _events

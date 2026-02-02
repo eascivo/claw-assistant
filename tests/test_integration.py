@@ -30,6 +30,8 @@ async def test_get_metrics(app) -> None:
     assert isinstance(data["postmortem_total"], int)
     assert isinstance(data["postmortem_last_24h"], int)
     assert isinstance(data["pending_count"], int)
+    assert "events_count" in data
+    assert isinstance(data["events_count"], int)
     assert data["postmortem_last_24h"] <= data["postmortem_total"]
 
 
