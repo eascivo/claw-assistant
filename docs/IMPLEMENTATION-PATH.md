@@ -269,6 +269,14 @@ claw-assistant/
 | **get_events_count() / get_run_count()** | `governance/events.py` 中实现；run_count 为 limb_executed 事件数。 |
 | **验收** | 集成测 test_get_metrics 断言 events_count、run_count 存在且为 int。 |
 
+### 已迭代：GET /metrics 监控扩展（P3）
+
+| 内容 | 说明 |
+|------|------|
+| **get_run_count_by_limb() / get_run_count_by_channel()** | `governance/events.py`：按 limb_executed 的 payload.tool_name、payload.channel 统计次数，返回 dict[str, int]。 |
+| **GET /metrics** | 响应增加 `run_count_by_limb`、`run_count_by_channel`，供按 limb/channel 监控。 |
+| **验收** | 单测 test_get_run_count_by_limb、test_get_run_count_by_channel 等；集成测 test_get_metrics 断言新字段存在且为 dict。 |
+
 ### 已迭代：新增 Limb 文档说明
 
 | 内容 | 说明 |
@@ -325,9 +333,9 @@ claw-assistant/
 |------|----------|----------|--------|
 | **Phase 1** | 单 Brain-A；单 Limb（Content）；Proxy + 人工审批；World Checkpoint（占位） | 全部完成；且 Constitution、Checkpoint 校验器与复盘已实现 | **100%** |
 | **Phase 2** | Brain-B 影子测试；Constitution v1；Dashboard 时间轴 | channel main/experimental、experimental 免审批、Constitution forbid/restrict + 意图偏差（智谱）、事件存储 + GET /events、Dashboard 待审批+时间轴+复盘 | **100%** |
-| **Phase 3** | 多 Limb；自动复盘；商业闭环稳定 | 多 Limb、复盘持久化+告警、health/metrics、回放 UI、**可收敛小步（文档+占位 API）**；可收敛扩展与更复杂监控未做 | **约 92%** |
+| **Phase 3** | 多 Limb；自动复盘；商业闭环稳定 | 多 Limb、复盘持久化+告警、health/metrics、回放 UI、可收敛小步、**GET /metrics 按 limb/channel 扩展**；告警渠道（Webhook）待后续 | **约 95%** |
 
-**整体 MVP（不含 OpenClaw）完成度：约 97%。**
+**整体 MVP（不含 OpenClaw）完成度：约 98%。**
 
 ### 与全量战略蓝图的偏差
 
@@ -342,7 +350,7 @@ claw-assistant/
 
 ### 完成度小结
 
-- **相对 MVP 路径（IMPLEMENTATION-PATH 约定）**：Phase 1/2 已收尾，Phase 3 约 92%，**整体约 97%**。剩余：可收敛扩展（写回 config/自动调参）、可选更复杂监控。
+- **相对 MVP 路径（IMPLEMENTATION-PATH 约定）**：Phase 1/2 已收尾，Phase 3 收尾完成（回放 UI、可收敛小步、监控扩展），**整体约 98%**。剩余：可收敛扩展（写回 config/自动调参）、告警渠道（Webhook）等可选扩展。
 - **相对全量 SYSTEM-DESIGN**：核心治理与任务流、Dashboard 与可观测已对齐；**未覆盖**：OpenClaw 接入、IM Bot、Gateway WS/RPC、Limb 经 OpenClaw 调度与隧道。若按「全量蓝图」计，完成度约 **55%**（治理+数据流+Dashboard 为主，Control/Commander/Data 形态未接 OpenClaw）。
 
 ---
@@ -355,7 +363,7 @@ claw-assistant/
 |--------|----|------|------|
 | ~~P1~~ | **回放 UI**（已完成） | Dashboard 支持按 task 查看：调用 GET /events?task_id=xxx，单任务时间轴下拉筛选 | 前端可选中某 task_id，仅展示该任务事件；见「已迭代：回放 UI」 |
 | ~~P2~~ | **可收敛小步**（已完成） | 定义「收敛」最小形态（输入/输出/流程）；GET /convergence/suggestions 占位 API；复盘 ≥ 阈值时返回一条建议 | 文档定义 + 占位 API；见「已迭代：可收敛小步」 |
-| P3 | **监控扩展** | 按需增加 GET /metrics 指标（如按 limb 的执行次数、按 channel 的 run 数）或告警渠道（如 Webhook） | 配置项 + 单测/集成测 |
+| ~~P3~~ | **监控扩展**（已完成） | GET /metrics 增加 run_count_by_limb、run_count_by_channel；告警渠道（Webhook）待后续 | 单测/集成测；见「已迭代：GET /metrics 监控扩展」 |
 
 ### 中期（Phase 4 方向选择，二选一或并行）
 

@@ -3,7 +3,13 @@
 import time
 
 import pytest
-from claw_assistant.governance.events import append_event, clear_events, get_events
+from claw_assistant.governance.events import (
+    append_event,
+    clear_events,
+    get_events,
+    get_run_count_by_limb,
+    get_run_count_by_channel,
+)
 
 
 def setup_function() -> None:
@@ -56,6 +62,33 @@ def test_get_events_task_id() -> None:
     assert out_t2[0]["payload"]["task_id"] == "t2"
     out_none = get_events(task_id="t0")
     assert len(out_none) == 0
+
+
+def test_get_run_count_by_limb() -> None:
+    append_event("limb_executed", {"tool_name": "content", "channel": "main"})
+    append_event("limb_executed", {"tool_name": "content", "channel": "main"})
+    append_event("limb_executed", {"tool_name": "ops", "channel": "experimental"})
+    append_event("approval_requested", {"approval_id": "a1"})
+    by_limb = get_run_count_by_limb()
+    assert by_limb == {"content": 2, "ops": 1}
+
+
+def test_get_run_count_by_channel() -> None:
+    append_event("limb_executed", {"tool_name": "content", "channel": "main"})
+    append_event("limb_executed", {"tool_name": "ops", "channel": "experimental"})
+    append_event("limb_executed", {"tool_name": "content", "channel": "main"})
+    by_channel = get_run_count_by_channel()
+    assert by_channel == {"main": 2, "experimental": 1}
+
+
+def test_get_run_count_by_limb_empty_returns_empty_dict() -> None:
+    assert get_run_count_by_limb() == {}
+
+
+def test_get_run_count_by_channel_missing_channel_uses_unknown() -> None:
+    append_event("limb_executed", {"tool_name": "content"})
+    by_channel = get_run_count_by_channel()
+    assert by_channel == {"unknown": 1}
 
 
 def test_clear_events() -> None:

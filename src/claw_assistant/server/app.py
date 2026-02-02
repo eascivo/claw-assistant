@@ -11,7 +11,13 @@ from claw_assistant.config import load_config, resolve_tool_from_intent
 from claw_assistant.governance.approval import ApprovalManager
 from claw_assistant.governance.checkpoint import get_postmortems, load_postmortems_from_file_into_memory
 from claw_assistant.governance.convergence import get_convergence_suggestions
-from claw_assistant.governance.events import get_events, get_events_count, get_run_count
+from claw_assistant.governance.events import (
+    get_events,
+    get_events_count,
+    get_run_count,
+    get_run_count_by_limb,
+    get_run_count_by_channel,
+)
 from claw_assistant.governance.task_flow import run_task_flow
 
 
@@ -55,7 +61,7 @@ def create_app(config: dict[str, Any] | None = None) -> FastAPI:
 
     @app.get("/metrics")
     async def api_metrics() -> dict[str, Any]:
-        """基础指标，供监控/可观测；含 postmortem_total、pending_count、postmortem_last_24h、events_count、run_count。"""
+        """基础指标，供监控/可观测；含 postmortem_total、pending_count、postmortem_last_24h、events_count、run_count、run_count_by_limb、run_count_by_channel。"""
         import time
 
         run_config = getattr(app.state, "config", None) or load_config()
@@ -72,6 +78,8 @@ def create_app(config: dict[str, Any] | None = None) -> FastAPI:
             "pending_count": len(pending),
             "events_count": get_events_count(),
             "run_count": get_run_count(),
+            "run_count_by_limb": get_run_count_by_limb(),
+            "run_count_by_channel": get_run_count_by_channel(),
         }
 
     @app.post("/run")

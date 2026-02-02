@@ -44,6 +44,28 @@ def get_run_count() -> int:
     return sum(1 for e in _events if e.get("type") == "limb_executed")
 
 
+def get_run_count_by_limb() -> dict[str, int]:
+    """按 limb（tool_name）统计 limb_executed 次数，供 GET /metrics 监控扩展。"""
+    counts: dict[str, int] = {}
+    for e in _events:
+        if e.get("type") != "limb_executed":
+            continue
+        name = e.get("payload", {}).get("tool_name") or "unknown"
+        counts[name] = counts.get(name, 0) + 1
+    return counts
+
+
+def get_run_count_by_channel() -> dict[str, int]:
+    """按 channel 统计 limb_executed 次数，供 GET /metrics 监控扩展。"""
+    counts: dict[str, int] = {}
+    for e in _events:
+        if e.get("type") != "limb_executed":
+            continue
+        ch = e.get("payload", {}).get("channel") or "unknown"
+        counts[ch] = counts.get(ch, 0) + 1
+    return counts
+
+
 def clear_events() -> None:
     """清空事件（仅测试用）。"""
     global _events
