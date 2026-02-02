@@ -295,6 +295,13 @@ claw-assistant/
 | **task_flow** | 审批 register 后调用 get_notifier(config).send_approval_request(**pending.to_public())，不阻塞。 |
 | **验收** | 单测 test_im.get_notifier_*、send_approval_request 不崩溃；config.example 注释 im.provider、im.feishu.webhook_url。 |
 
+### 已迭代：飞书实装小步（Webhook 发送审批通知）
+
+| 内容 | 说明 |
+|------|------|
+| **FeishuNotifier.send_approval_request** | 当 im.feishu.webhook_url 配置时，POST 到飞书自定义机器人 Webhook：msg_type=text，content.text 含 approval_id、task_id、tool、summary、risk；失败仅 log。 |
+| **验收** | 单测 test_feishu_notifier_send_approval_request_posts_to_webhook（patch httpx.post 断言 URL 与 body）。解析用户审批指令（事件订阅）待后续。 |
+
 ### 已迭代：新增 Limb 文档说明
 
 | 内容 | 说明 |
@@ -401,6 +408,6 @@ claw-assistant/
 ### 下一步规划（当前）
 
 - **Phase 3 收尾已完成**：回放 UI、可收敛小步、监控扩展、告警渠道 Webhook 均已完成。
-- **IM 预留接口已完成**：IMNotifier、get_notifier、FeishuNotifier stub；审批挂起时可选调用 send_approval_request。**飞书实装**：接 Webhook 或发消息 API、解析用户审批指令（事件订阅）待做；所需见 [FEISHU-INTEGRATION.md](FEISHU-INTEGRATION.md)。
+- **IM 预留接口已完成**：IMNotifier、get_notifier、FeishuNotifier；审批挂起时可选调用 send_approval_request。**飞书实装小步已完成**：配置 im.feishu.webhook_url 时 POST 审批通知到飞书群；解析用户审批指令（事件订阅）待做，见 [FEISHU-INTEGRATION.md](FEISHU-INTEGRATION.md)。
 - **OpenClaw**：仍在准备中，暂不列入近期必做；准备就绪后再按 Roadmap 方向 A 排期。
 - **之后可选**：可收敛扩展（写回 config/自动调参）等；Dashboard 已展示 GET /convergence/suggestions。

@@ -1,7 +1,9 @@
-"""IM 通知统一抽象：发送审批/待办通知；飞书 stub，钉钉/Discord 待实现。"""
+"""IM 通知统一抽象：发送审批/待办通知；飞书实装 Webhook，钉钉/Discord 待实现。"""
 
 import logging
 from typing import Any, Protocol
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +38,7 @@ class NoOpNotifier:
 
 
 class FeishuNotifier:
-    """飞书通知 stub：占位实现，后续接 Webhook 或发消息 API。"""
+    """飞书通知：自定义机器人 Webhook 发送审批/待办到群。"""
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         cfg = (config or {}).get("feishu") or {}
@@ -50,17 +52,20 @@ class FeishuNotifier:
         summary: str,
         risk: str | None = None,
     ) -> None:
-        """占位：后续 POST 到飞书 Webhook 或发消息 API；当前仅 log。"""
-        logger.debug(
-            "feishu notifier stub: approval_id=%s task_id=%s tool=%s summary=%s",
-            approval_id,
-            task_id,
-            tool_name,
-            (summary or "")[:80],
-        )
-        if self._webhook_url:
-            # 预留：后续 httpx.post(self._webhook_url, json={...})
-            pass
+        """POST 到飞书自定义机器人 Webhook（msg_type=text）；失败仅打 log。"""
+        if not self._webhook_url:
+            logger.debug("feishu webhook_url not set, skip send")
+            return
+        text = f"【待审批】approval_id={approval_id}\ntask_id={task_id}\ntool={tool_name}\nsummary={summary or '-'}"
+        if risk:
+            text += f"\nrisk={risk}"
+        payload: dict[str, Any] = {"msg_type": "text", "content": {"text": text}}
+        try:
+            resp = httpx.post(self._webhook_url, json=payload, timeout=5.0)
+            if resp.status_code >= 400:
+                logger.warning("feishu webhook returned %s: %s", resp.status_code, (resp.text or "")[:200])
+        except Exception as e:
+            logger.warning("feishu webhook failed: %s", e)
 
 
 def get_notifier(config: dict[str, Any] | None = None) -> IMNotifier:
