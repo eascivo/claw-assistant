@@ -99,3 +99,32 @@ async def test_run_checkpoint_postmortem_file_sink() -> None:
         assert entry["actual"] == 40
     finally:
         path.unlink(missing_ok=True)
+
+
+def test_get_postmortems_merges_file_sink() -> None:
+    """get_postmortems(config) 在 postmortem_sink=file 时合并 JSONL 文件中的复盘，按 task_id 去重。"""
+    clear_postmortems()
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
+        path = Path(f.name)
+        f.write(json.dumps({"task_id": "from-file", "tool_name": "content", "expected": 1, "actual": 2, "deviation": 1.0, "params": {}, "result": {}}, ensure_ascii=False) + "\n")
+    try:
+        config = {"checkpoint": {"postmortem_sink": "file", "postmortem_file_path": str(path)}}
+        post = get_postmortems(config)
+        assert len(post) == 1
+        assert post[0]["task_id"] == "from-file"
+        # 内存有一条、文件有一条（不同 task_id）时返回两条
+        from claw_assistant.governance.checkpoint import _postmortems
+        _postmortems.append({"task_id": "from-memory", "tool_name": "content", "expected": 10, "actual": 5, "deviation": -0.5, "params": {}, "result": {}})
+        post2 = get_postmortems(config)
+        assert len(post2) == 2
+        task_ids = {p["task_id"] for p in post2}
+        assert task_ids == {"from-file", "from-memory"}
+        # 同一 task_id 只保留一条（内存优先）
+        _postmortems.clear()
+        _postmortems.append({"task_id": "from-file", "tool_name": "content", "expected": 99, "actual": 98, "deviation": -0.01, "params": {}, "result": {}})
+        post3 = get_postmortems(config)
+        assert len(post3) == 1
+        assert post3[0]["expected"] == 99  # 内存优先
+    finally:
+        path.unlink(missing_ok=True)
+        clear_postmortems()

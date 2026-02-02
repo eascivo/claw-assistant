@@ -25,9 +25,46 @@ def register_validator(name: str, fn: ValidatorFn) -> None:
     _validators[name] = fn
 
 
-def get_postmortems() -> list[dict[str, Any]]:
-    """返回已写入的复盘列表（内存，供 API/测试用）。"""
-    return list(_postmortems)
+def _load_postmortems_from_file(config: dict[str, Any]) -> list[dict[str, Any]]:
+    """当 checkpoint.postmortem_sink=file 时从 JSONL 文件读取复盘列表；文件不存在或解析失败返回 []。"""
+    cfg = config.get("checkpoint") or {}
+    if cfg.get("postmortem_sink") != "file":
+        return []
+    path_str = cfg.get("postmortem_file_path") or DEFAULT_POSTMORTEM_FILE
+    path = Path(path_str)
+    if not path.exists():
+        return []
+    entries: list[dict[str, Any]] = []
+    try:
+        for line in path.read_text(encoding="utf-8").strip().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entries.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    except OSError as e:
+        logger.warning("postmortem file read failed: %s", e)
+    return entries
+
+
+def get_postmortems(config: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    """返回复盘列表：内存 +（当 config.checkpoint.postmortem_sink=file 时）JSONL 文件中的条目，按 task_id 去重（内存优先）。"""
+    config = config or load_config()
+    seen: set[str] = set()
+    result: list[dict[str, Any]] = []
+    for entry in _postmortems:
+        tid = entry.get("task_id")
+        if tid not in seen:
+            seen.add(tid)
+            result.append(entry)
+    for entry in _load_postmortems_from_file(config):
+        tid = entry.get("task_id")
+        if tid not in seen:
+            seen.add(tid)
+            result.append(entry)
+    return result
 
 
 def clear_postmortems() -> None:

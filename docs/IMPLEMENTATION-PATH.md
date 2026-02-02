@@ -200,8 +200,16 @@ claw-assistant/
 | **checkpoint.postmortem_file_path** | sink=file 时写入路径，默认 `postmortems.jsonl`；便于后续扩展为 DB/长期记忆。 |
 | **验收** | 单测 test_run_checkpoint_postmortem_file_sink；GET /postmortems 仍读内存，文件为持久化备份。 |
 
+### 已迭代：GET /postmortems 合并 JSONL（自动复盘扩展）
+
+| 内容 | 说明 |
+|------|------|
+| **get_postmortems(config)** | config 可选；当 checkpoint.postmortem_sink=file 时从 JSONL 读取并与内存合并，按 task_id 去重（内存优先）。 |
+| **GET /postmortems** | 使用 run_config 调用 get_postmortems(config)，返回内存 + 文件中的复盘。 |
+| **验收** | 单测 test_get_postmortems_merges_file_sink；重启后或跨进程可通过文件看到历史复盘。 |
+
 ### Phase 3 再往后
 
 - **多 Limb 增强**：更多 limbs 注册与路由、intent_tool_map 扩展。
-- **自动复盘扩展**：从 JSONL 加载/合并到 API、收益指标与告警。
+- **自动复盘扩展**：收益指标与告警、可选从文件加载到内存（启动时）。
 - **商业闭环稳定**：可观测、可回放、可收敛。

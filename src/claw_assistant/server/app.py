@@ -67,8 +67,9 @@ def create_app(config: dict[str, Any] | None = None) -> FastAPI:
 
     @app.get("/postmortems")
     async def api_postmortems() -> dict[str, Any]:
-        """列出 World Checkpoint 触发的复盘记录。"""
-        return {"postmortems": get_postmortems()}
+        """列出 World Checkpoint 触发的复盘记录（内存 + 可选 JSONL 文件合并）。"""
+        run_config = getattr(app.state, "config", None) or load_config()
+        return {"postmortems": get_postmortems(run_config)}
 
     @app.get("/events")
     async def api_events(since_ts: float | None = None, limit: int = 200) -> dict[str, Any]:
