@@ -254,7 +254,14 @@ claw-assistant/
 | **GET /postmortems summary.last_24h** | 过去 24 小时内 created_at 的复盘条数；无 created_at 的条目（如旧文件）不计入。 |
 | **验收** | 集成测 test_get_postmortems_returns_summary 断言 summary.last_24h 存在且 last_24h <= total。 |
 
+### 已迭代：可观测小步（GET /health）
+
+| 内容 | 说明 |
+|------|------|
+| **GET /health** | 健康检查，返回 `{ "status": "ok" }`，供负载均衡/监控探测。 |
+| **验收** | 集成测 test_get_health。 |
+
 ### Phase 3 再往后
 
 - **多 Limb 增强**：更多 limbs 注册、intent_tool_map 扩展。
-- **商业闭环稳定**：可观测、可回放、可收敛。
+- **商业闭环稳定**：可回放、可收敛；可观测可扩展（如 GET /metrics）。

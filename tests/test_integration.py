@@ -7,6 +7,16 @@ from httpx import ASGITransport, AsyncClient
 
 
 @pytest.mark.asyncio
+async def test_get_health(app) -> None:
+    """GET /health 返回 200 与 status ok，供负载均衡/监控探测。"""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
+        r = await client.get("/health")
+    assert r.status_code == 200
+    assert r.json().get("status") == "ok"
+
+
+@pytest.mark.asyncio
 async def test_run_then_approve_flow(app) -> None:
     """POST /run 挂起 → GET /status 有记录 → POST /approve 解挂 → /run 返回成功。"""
     transport = ASGITransport(app=app)

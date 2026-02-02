@@ -47,6 +47,11 @@ def create_app(config: dict[str, Any] | None = None) -> FastAPI:
         channel: str = "main"  # main | experimental（Brain-B 影子）
         tool: str | None = None  # 路由到的 limb；省略时按 config.intent_tool_map 从 intent 推断
 
+    @app.get("/health")
+    async def api_health() -> dict[str, Any]:
+        """健康检查，供负载均衡/监控探测。"""
+        return {"status": "ok"}
+
     @app.post("/run")
     async def api_run(body: RunBody) -> dict[str, Any]:
         """发起一次任务流；若需审批会挂起直到 approve/reject。channel=experimental 为 Brain-B 影子；tool 省略时按 intent 推断 limb。"""
