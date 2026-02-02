@@ -48,10 +48,20 @@ claw-assistant approve <approvalId>
 | `approve <id>` | 通过审批 |
 | `reject <id>` | 拒绝审批 |
 
-- **Constitution**：在 `config.yaml` 中配置 `constitution.forbid`、`constitution.restrict`；可选意图偏差分 `constitution.intent_deviation.enabled` + `threshold`，`stub_score`（测试用）或 `provider: zhipu`（智谱）。智谱需环境变量：**`ZHIPUAI_API_KEY`**（必填）；**`ZHIPUAI_BASE_URL`**（可选，替换默认 `https://open.bigmodel.cn/api/paas/v4`）。config 中 `intent_deviation.base_url` 可覆盖 base_url。
+- **Constitution**：在 `config.yaml` 中配置 `constitution.forbid`、`constitution.restrict`；可选意图偏差分 `constitution.intent_deviation.enabled` + `threshold`，`stub_score`（测试用）或 `provider: zhipu`（智谱 AI）。智谱需环境变量：**`ZHIPUAI_API_KEY`**（必填）；**`ZHIPUAI_BASE_URL`**（可选）。扩展其他 LLM（如 OpenAI）见 `config.example.yaml` 的 intent_deviation 注释与 [IMPLEMENTATION-PATH](docs/IMPLEMENTATION-PATH.md)「intent_deviation 接智谱 AI」扩展选项。
 - **World Checkpoint**：配置 `checkpoint.threshold`、`delay_seconds`；limb 可配置 `checkpoint: "content_stub"`；偏差超阈值会写复盘，可通过 `GET /postmortems` 查看。
 - **Dashboard**：`cd dashboard && npm install && npm run dev`，浏览器打开 http://localhost:3000；需先启动 daemon（`claw-assistant serve`）。环境变量 `NEXT_PUBLIC_API_URL` 默认 `http://localhost:8080`。
 - **experimental 免审批**：默认 `channels.experimental.require_approval: false`，`run --channel experimental` 不挂起审批；设 `true` 则 experimental 也需审批。
+
+### 扩展：新增 Limb
+
+当前已注册 limb：`content`、`ops`、`notify`（均为 stub）。新增 limb 三步：
+
+1. **实现**：在 `src/claw_assistant/limbs/` 下新建 `xxx.py`，实现 `execute_xxx(params: dict) -> dict`，返回至少含 `ok`、`limb`（工具名）。
+2. **注册**：在 `src/claw_assistant/limbs/__init__.py` 的 `LIMB_REGISTRY` 中增加 `"xxx": execute_xxx`。
+3. **配置**：在 `config.yaml` 的 `limbs` 下增加 `xxx: { endpoint, require_approval, priority }`；若希望未传 `tool` 时按 intent 推断，在 `intent_tool_map` 中增加 `{ pattern: "正则", tool: "xxx" }`。
+
+CLI/API 通过 `--tool` / `tool` 指定 limb；省略时按 `intent_tool_map` 从 intent 推断（无匹配则默认 content）。
 
 ### 测试
 

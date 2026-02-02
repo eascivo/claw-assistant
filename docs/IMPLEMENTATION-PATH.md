@@ -269,7 +269,13 @@ claw-assistant/
 | **get_events_count() / get_run_count()** | `governance/events.py` 中实现；run_count 为 limb_executed 事件数。 |
 | **验收** | 集成测 test_get_metrics 断言 events_count、run_count 存在且为 int。 |
 
+### 已迭代：新增 Limb 文档说明
+
+| 内容 | 说明 |
+|------|------|
+| **README「扩展：新增 Limb」** | 三步：实现 execute_xxx、在 LIMB_REGISTRY 注册、在 config limbs + intent_tool_map 配置；当前已注册 content / ops / notify。 |
+
 ### Phase 3 再往后
 
-- **多 Limb 增强**：更多 limbs 注册、intent_tool_map 扩展。
+- **多 Limb 增强**：按 README 文档继续注册新 limb、扩展 intent_tool_map。
 - **商业闭环稳定**：可回放、可收敛；可观测可按需继续扩展。
