@@ -379,11 +379,11 @@ claw-assistant/
 | 方向 | 内容 | 依赖 |
 |------|------|------|
 | **A. 接 OpenClaw** | 将 Control 改为 OpenClaw 双 agent；Governance 改为 Plugin（before/after_tool_call）；审批对接 exec.approval；Dashboard/Commander 经 Gateway WS/RPC | OpenClaw 可用环境、Gateway 协议稳定 |
-| **B. 深化闭环（仍不接 OpenClaw）** | IM Bot（飞书/Telegram）对接当前 FastAPI 审批 API；复盘→策略建议或自动调参；Limb 实装（如 Content 接真实发布 API） | 产品确定优先 Limb 与收益指标 |
+| **B. 深化闭环（仍不接 OpenClaw）** | IM Bot **飞书先行**，钉钉/Discord 等预留接口；对接当前 FastAPI 审批 API；复盘→策略建议或自动调参；Limb 实装（如 Content 接真实发布 API） | 飞书集成测试所需见 [FEISHU-INTEGRATION.md](FEISHU-INTEGRATION.md) |
 
 ### 下一步规划（当前）
 
-- **Phase 3 收尾已完成**：回放 UI、可收敛小步、监控扩展均已完成。
-- **告警渠道（Webhook）已完成**：checkpoint.alert_webhook_url 配置项；复盘告警触发时 POST 到该 URL；单测 test_run_checkpoint_alert_webhook_called、集成测 test_app_with_alert_webhook_config。
-- **OpenClaw / IM Bot**：仍在准备中，暂不列入近期必做；准备就绪后再按 Roadmap 方向 A 或 B 排期。
+- **Phase 3 收尾已完成**：回放 UI、可收敛小步、监控扩展、告警渠道 Webhook 均已完成。
+- **IM Bot**：**飞书先行**，钉钉、Discord 等可选适配、**预留统一接口**（发送审批/待办通知、解析用户审批指令、配置抽象）。飞书集成测试所需（凭证、事件订阅、公网 URL、权限等）见 [docs/FEISHU-INTEGRATION.md](FEISHU-INTEGRATION.md)。
+- **OpenClaw**：仍在准备中，暂不列入近期必做；准备就绪后再按 Roadmap 方向 A 排期。
 - **之后可选**：Dashboard 展示 GET /convergence/suggestions、可收敛扩展（写回 config/自动调参）等。
