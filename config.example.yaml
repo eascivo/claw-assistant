@@ -16,6 +16,11 @@ checkpoint:
   threshold: 0.5    # 相对偏差超过此值则写复盘
   delay_seconds: 0 # 0=立即校验，>0=延时后校验
 
+# channel：experimental 默认免审批（仅执行并记录），main 仍按 limb require_approval
+channels:
+  experimental:
+    require_approval: false  # true 则 experimental 也需审批
+
 limbs:
   content:
     endpoint: "http://localhost:8080/limb/content"  # stub 由 daemon 自身提供

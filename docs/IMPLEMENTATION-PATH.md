@@ -134,6 +134,18 @@ claw-assistant/
 
 ---
 
+## 已迭代：experimental 免审批
+
+| 内容 | 说明 |
+|------|------|
+| **channels 配置** | `config.channels.experimental.require_approval` 默认 `false`；`get_channel_config(config, channel)` 读取。 |
+| **task_flow** | 当 channel=experimental 且 `channels.experimental.require_approval=false` 时跳过审批，仅执行并记录事件。 |
+| **main** | main channel 仍按 limb `require_approval`；可配置 `channels.experimental.require_approval: true` 使 experimental 也需审批。 |
+
+- **验收**：`claw-assistant run --channel experimental "影子"` 在默认 config 下不挂起，直接返回成功；单测 `test_run_task_flow_experimental_skip_approval`、集成 `test_run_experimental_no_approval_when_skip`。
+
+---
+
 ## 下一步规划（Phase 2 剩余 / Phase 3）
 
 **每完成一个阶段或重大功能后，在此更新「下一步规划」小节。**
@@ -143,7 +155,6 @@ claw-assistant/
 | 内容 | 说明 |
 |------|------|
 | **Constitution 可选增强** | 可选 LLM 意图偏差分（deviationScore > threshold 则拦截）。 |
-| **experimental 免审批** | 配置项：experimental channel 不挂起审批，仅执行并记录事件，供影子测试。 |
 
 ### Phase 3 再往后
 

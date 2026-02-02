@@ -4,7 +4,7 @@ import logging
 import uuid
 from typing import Any
 
-from claw_assistant.config import get_limb_config, load_config
+from claw_assistant.config import get_channel_config, get_limb_config, load_config
 from claw_assistant.governance.approval import ApprovalManager
 from claw_assistant.governance.checkpoint import schedule_checkpoint
 from claw_assistant.governance.events import append_event
@@ -38,7 +38,13 @@ async def run_task_flow(
         return {"ok": False, "block_reason": block_reason or "unknown"}
 
     limb_cfg = get_limb_config(config, tool_name)
-    if limb_cfg and limb_cfg.get("require_approval"):
+    channel_cfg = get_channel_config(config, channel)
+    need_approval = (
+        limb_cfg
+        and limb_cfg.get("require_approval")
+        and channel_cfg.get("require_approval", True if channel == "main" else False)
+    )
+    if need_approval:
         pending = await approval_manager.register(
             session_key=session_key,
             tool_name=tool_name,

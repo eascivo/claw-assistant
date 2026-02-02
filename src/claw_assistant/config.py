@@ -39,7 +39,17 @@ def _default_config() -> dict[str, Any]:
         },
         "constitution": {"forbid": [], "allow": [], "restrict": []},
         "checkpoint": {"threshold": 0.5, "delay_seconds": 0},
+        "channels": {"experimental": {"require_approval": False}},
     }
+
+
+def get_channel_config(config: dict[str, Any], channel_name: str) -> dict[str, Any]:
+    """返回 channel 配置；experimental 默认 require_approval=False（免审批仅记录）。"""
+    channels = config.get("channels") or {}
+    cfg = channels.get(channel_name) or {}
+    if channel_name == "experimental":
+        return {"require_approval": cfg.get("require_approval", False)}
+    return dict(cfg)
 
 
 def get_constitution(config: dict[str, Any]) -> dict[str, Any]:

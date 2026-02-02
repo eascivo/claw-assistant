@@ -62,6 +62,18 @@ async def test_run_task_flow_channel_experimental(config_no_approval: dict) -> N
 
 
 @pytest.mark.asyncio
+async def test_run_task_flow_experimental_skip_approval(config_require_approval: dict) -> None:
+    """experimental 免审批：limb 需审批但 channel=experimental 且 channels.experimental.require_approval=false 时不挂起。"""
+    config = {**config_require_approval, "channels": {"experimental": {"require_approval": False}}}
+    manager = ApprovalManager()
+    out = await run_task_flow("影子测试", manager, config=config, channel="experimental")
+    assert out.get("ok") is True
+    assert out["result"].get("channel") == "experimental"
+    pending = await manager.list_pending()
+    assert len(pending) == 0
+
+
+@pytest.mark.asyncio
 async def test_run_task_flow_require_approval_then_approve(config_require_approval: dict) -> None:
     manager = ApprovalManager()
 
