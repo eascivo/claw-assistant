@@ -71,3 +71,33 @@ async def test_run_then_reject_flow(app) -> None:
         body = r_run.json()
         assert body.get("ok") is False
         assert "rejected" in body.get("error", "").lower()
+
+
+@pytest.mark.asyncio
+async def test_events_api_after_run(app) -> None:
+    """run → approve 后 GET /events 包含 approval_requested / approval_resolved / limb_executed。"""
+    from claw_assistant.governance.events import clear_events, get_events
+
+    clear_events()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=30.0) as client:
+        loop = asyncio.get_running_loop()
+        run_future = loop.create_future()
+
+        async def do_run() -> None:
+            r = await client.post("/run", json={"intent": "发布一条测试"})
+            run_future.set_result(r)
+
+        asyncio.create_task(do_run())
+        await asyncio.sleep(0.2)
+        pending = (await client.get("/status")).json().get("pending", [])
+        assert len(pending) >= 1
+        await client.post("/approve", json={"approval_id": pending[0]["approval_id"]})
+        await asyncio.wait_for(run_future, timeout=5.0)
+        r_events = await client.get("/events")
+    assert r_events.status_code == 200
+    events = r_events.json().get("events", [])
+    types = [e["type"] for e in events]
+    assert "approval_requested" in types
+    assert "approval_resolved" in types
+    assert "limb_executed" in types

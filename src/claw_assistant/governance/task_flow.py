@@ -7,6 +7,7 @@ from typing import Any
 from claw_assistant.config import get_limb_config, load_config
 from claw_assistant.governance.approval import ApprovalManager
 from claw_assistant.governance.checkpoint import schedule_checkpoint
+from claw_assistant.governance.events import append_event
 from claw_assistant.governance.hooks import after_tool_call, before_tool_call
 from claw_assistant.limbs import execute_limb
 
@@ -40,6 +41,7 @@ async def run_task_flow(
             session_key=session_key,
             tool_name=tool_name,
             params=params,
+            task_id=task_id,
             risk=limb_cfg.get("risk"),
         )
         decision = await approval_manager.wait(pending.approval_id)
@@ -48,6 +50,10 @@ async def run_task_flow(
 
     # 幂等占位：Phase 1 不实现
     result = execute_limb(tool_name, params)
+    append_event(
+        "limb_executed",
+        {"task_id": task_id, "tool_name": tool_name, "summary": params.get("summary", ""), "ok": result.get("ok")},
+    )
     after_tool_call(tool_name, params, result, config)
     schedule_checkpoint(tool_name, params, result, task_id, config)
 

@@ -50,6 +50,7 @@ claw-assistant approve <approvalId>
 
 - **Constitution**：在 `config.yaml` 中配置 `constitution.forbid`（禁止执行的工具名）、`constitution.restrict`（必须走审批的工具）。
 - **World Checkpoint**：配置 `checkpoint.threshold`、`delay_seconds`；limb 可配置 `checkpoint: "content_stub"`；偏差超阈值会写复盘，可通过 `GET /postmortems` 查看。
+- **Dashboard**：`cd dashboard && npm install && npm run dev`，浏览器打开 http://localhost:3000；需先启动 daemon（`claw-assistant serve`）。环境变量 `NEXT_PUBLIC_API_URL` 默认 `http://localhost:8080`。
 
 ### 测试
 

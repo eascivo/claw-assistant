@@ -5,6 +5,7 @@ import logging
 from typing import Any, Callable
 
 from claw_assistant.config import get_limb_config, load_config
+from claw_assistant.governance.events import append_event
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,10 @@ def _write_postmortem(
         "result": result,
     }
     _postmortems.append(entry)
+    append_event(
+        "postmortem",
+        {"tool_name": tool_name, "task_id": task_id, "expected": expected, "actual": actual, "deviation": deviation},
+    )
     logger.warning(
         "world_checkpoint postmortem: tool=%s task_id=%s deviation=%.2f",
         tool_name,

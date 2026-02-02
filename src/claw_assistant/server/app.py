@@ -4,11 +4,13 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from claw_assistant.config import load_config
 from claw_assistant.governance.approval import ApprovalManager
 from claw_assistant.governance.checkpoint import get_postmortems
+from claw_assistant.governance.events import get_events
 from claw_assistant.governance.task_flow import run_task_flow
 
 
@@ -21,6 +23,13 @@ def create_app() -> FastAPI:
         # 可在此做清理
 
     app = FastAPI(title="claw-assistant", lifespan=lifespan)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     app.state.approval_manager = approval_manager
 
     class RunBody(BaseModel):
@@ -51,6 +60,11 @@ def create_app() -> FastAPI:
     async def api_postmortems() -> dict[str, Any]:
         """列出 World Checkpoint 触发的复盘记录。"""
         return {"postmortems": get_postmortems()}
+
+    @app.get("/events")
+    async def api_events(since_ts: float | None = None, limit: int = 200) -> dict[str, Any]:
+        """时间轴事件：approval_requested / approval_resolved / limb_executed / postmortem。"""
+        return {"events": get_events(since_ts=since_ts, limit=limit)}
 
     class ApproveBody(BaseModel):
         approval_id: str

@@ -6,6 +6,8 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
+from claw_assistant.governance.events import append_event
+
 logger = logging.getLogger(__name__)
 
 
@@ -69,6 +71,10 @@ class ApprovalManager:
         )
         async with self._lock:
             self._pending[approval_id] = pending
+        append_event(
+            "approval_requested",
+            {"approval_id": approval_id, "task_id": task_id, "tool_name": tool_name, "summary": summary, "risk": risk},
+        )
         logger.info("approval registered: %s", approval_id)
         return pending
 
@@ -92,6 +98,7 @@ class ApprovalManager:
             return False
         if not p._future.done():
             p._future.set_result(decision)
+        append_event("approval_resolved", {"approval_id": approval_id, "decision": decision})
         logger.info("approval resolved: %s -> %s", approval_id, decision)
         return True
 

@@ -108,6 +108,31 @@ claw-assistant/
 
 **依赖**：事件存储（内存 / Redis / SQLite 记录 approval、执行、postmortem）；Dashboard 后端读事件并暴露 API；前端连后端展示时间轴。
 
+---
+
+## 已迭代：Phase 2 Dashboard 时间轴
+
+| 内容 | 说明 |
+|------|------|
+| **事件存储** | `governance/events.py`：`append_event(type, payload)`、`get_events(since_ts, limit)`；审批 register/resolve、limb 执行、postmortem 时写入。 |
+| **读事件 API** | `GET /events?since_ts=&limit=`；Daemon 启用 CORS（localhost:3000）供前端调用。 |
+| **Dashboard 前端** | `dashboard/`：Next.js 14 App Router + Tailwind；单页展示待审批、时间轴（最近 100 条）、复盘；`NEXT_PUBLIC_API_URL` 默认 `http://localhost:8080`；每 5s 刷新。 |
+
+- **验收**：终端 1 `claw-assistant serve`，终端 2 `cd dashboard && npm run dev`，浏览器打开 http://localhost:3000，可见待审批 / 时间轴 / 复盘；跑一次 run → approve 后时间轴有事件。
+
+---
+
+## 下一步规划（Phase 2 剩余 / Phase 3）
+
+**每完成一个阶段或重大功能后，在此更新「下一步规划」小节。**
+
+### Phase 2 剩余建议
+
+| 内容 | 说明 |
+|------|------|
+| **Brain-B 影子测试** | 双 agent（main / experimental）；实验渠道任务先走 Brain-B，通过后再进 Brain-A 生产；依赖双 agent bindings 与任务路由。 |
+| **Constitution 可选增强** | 可选 LLM 意图偏差分（deviationScore > threshold 则拦截）。 |
+
 ### Phase 3 再往后
 
 - **多 Limb**：多 tools/skills 注册与路由。
