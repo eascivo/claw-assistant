@@ -27,6 +27,7 @@ checkpoint:
   delay_seconds: 0  # 0=立即校验，>0=延时后校验
   # postmortem_sink: memory  # memory=仅内存（默认）；file=同时追加到 JSONL 文件
   # postmortem_file_path: postmortems.jsonl  # sink=file 时写入路径，便于后续扩展为 DB/长期记忆
+  # alert_after_postmortem_count: 10  # 可选；复盘条数 >= 此值时 summary.alert 为 true，供告警用
 
 # channel：experimental 默认免审批（仅执行并记录），main 仍按 limb require_approval
 channels:

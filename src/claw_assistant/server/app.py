@@ -74,13 +74,21 @@ def create_app(config: dict[str, Any] | None = None) -> FastAPI:
 
     @app.get("/postmortems")
     async def api_postmortems() -> dict[str, Any]:
-        """列出 World Checkpoint 触发的复盘记录（内存 + 可选 JSONL 文件合并）；summary 供收益指标/告警用。"""
+        """列出 World Checkpoint 触发的复盘记录（内存 + 可选 JSONL 文件合并）；summary 含 total 与可选告警。"""
         run_config = getattr(app.state, "config", None) or load_config()
         postmortems = get_postmortems(run_config)
-        return {
-            "postmortems": postmortems,
-            "summary": {"total": len(postmortems)},
-        }
+        total = len(postmortems)
+        summary: dict[str, Any] = {"total": total}
+        cfg = run_config.get("checkpoint") or {}
+        threshold = cfg.get("alert_after_postmortem_count")
+        if threshold is not None:
+            try:
+                n = int(threshold)
+                summary["alert_threshold"] = n
+                summary["alert"] = total >= n
+            except (TypeError, ValueError):
+                pass
+        return {"postmortems": postmortems, "summary": summary}
 
     @app.get("/events")
     async def api_events(since_ts: float | None = None, limit: int = 200) -> dict[str, Any]:

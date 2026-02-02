@@ -232,8 +232,15 @@ claw-assistant/
 | **GET /postmortems** | 响应增加 `summary: { total: N }`，N 为复盘条数；供 Dashboard/告警做收益指标用。 |
 | **验收** | 集成测 test_get_postmortems_returns_summary；Dashboard 仍用 postmortems 列表，兼容。 |
 
+### 已迭代：复盘告警（total 超阈值）
+
+| 内容 | 说明 |
+|------|------|
+| **checkpoint.alert_after_postmortem_count** | 可选；复盘条数 >= 此值时 GET /postmortems 的 summary.alert 为 true，summary.alert_threshold 为配置值。 |
+| **验收** | 集成测 test_get_postmortems_summary_alert_when_over_threshold；config.example 注释示例。 |
+
 ### Phase 3 再往后
 
 - **多 Limb 增强**：更多 limbs 注册、intent_tool_map 扩展。
-- **自动复盘扩展**：告警（如 total 超阈值）、last_24h 等指标。
+- **自动复盘扩展**：last_24h 等指标、告警事件写入 events。
 - **商业闭环稳定**：可观测、可回放、可收敛。

@@ -180,3 +180,26 @@ async def test_get_postmortems_returns_summary(app) -> None:
     assert "total" in data["summary"]
     assert isinstance(data["summary"]["total"], int)
     assert data["summary"]["total"] == len(data["postmortems"])
+
+
+@pytest.mark.asyncio
+async def test_get_postmortems_summary_alert_when_over_threshold() -> None:
+    """当 config.checkpoint.alert_after_postmortem_count 存在且 total >= 阈值时，summary.alert 为 true。"""
+    from tests.conftest import TEST_CONFIG
+
+    config = {
+        **TEST_CONFIG.copy(),
+        "checkpoint": {"threshold": 0.5, "delay_seconds": 0, "alert_after_postmortem_count": 0},
+    }
+    from claw_assistant.server.app import create_app
+
+    app = create_app(config=config)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
+        r = await client.get("/postmortems")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["summary"]["total"] >= 0
+    assert "alert_threshold" in data["summary"]
+    assert data["summary"]["alert_threshold"] == 0
+    assert data["summary"]["alert"] is True
