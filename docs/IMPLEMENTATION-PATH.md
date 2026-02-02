@@ -277,5 +277,5 @@ claw-assistant/
 
 ### Phase 3 再往后
 
-- **多 Limb 增强**：按 README 文档继续注册新 limb、扩展 intent_tool_map。
+- **多 Limb 增强**：当前阶段已收尾（content / ops / notify 注册、intent_tool_map、扩展文档齐全）；后续按 [README 扩展：新增 Limb](README.md) 即可增加新 limb 与 intent_tool_map。
 - **商业闭环稳定**：可回放、可收敛；可观测可按需继续扩展。
