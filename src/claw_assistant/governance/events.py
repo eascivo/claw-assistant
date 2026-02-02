@@ -20,11 +20,17 @@ def append_event(event_type: str, payload: dict[str, Any]) -> None:
         _events[:] = _events[-_max_events:]
 
 
-def get_events(since_ts: float | None = None, limit: int = 200) -> list[dict[str, Any]]:
-    """返回事件列表，按时间正序；since_ts 为可选起始时间戳，limit 限制条数。"""
+def get_events(
+    since_ts: float | None = None,
+    limit: int = 200,
+    task_id: str | None = None,
+) -> list[dict[str, Any]]:
+    """返回事件列表，按时间正序。since_ts 为可选起始时间戳，limit 限制条数，task_id 可选用于单任务回放。"""
     out = list(_events)
     if since_ts is not None:
         out = [e for e in out if e["ts"] >= since_ts]
+    if task_id is not None:
+        out = [e for e in out if e.get("payload", {}).get("task_id") == task_id]
     return out[-limit:] if limit else out
 
 

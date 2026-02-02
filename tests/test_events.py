@@ -41,6 +41,23 @@ def test_get_events_limit() -> None:
     assert out[1]["payload"]["i"] == 4
 
 
+def test_get_events_task_id() -> None:
+    append_event("limb_executed", {"task_id": "t1", "tool_name": "content"})
+    append_event("limb_executed", {"task_id": "t2", "tool_name": "ops"})
+    append_event("approval_requested", {"task_id": "t1", "approval_id": "a1"})
+    append_event("approval_resolved", {"approval_id": "a1", "decision": "approve"})
+    out_all = get_events()
+    assert len(out_all) == 4
+    out_t1 = get_events(task_id="t1")
+    assert len(out_t1) == 2
+    assert all(e.get("payload", {}).get("task_id") == "t1" for e in out_t1)
+    out_t2 = get_events(task_id="t2")
+    assert len(out_t2) == 1
+    assert out_t2[0]["payload"]["task_id"] == "t2"
+    out_none = get_events(task_id="t0")
+    assert len(out_none) == 0
+
+
 def test_clear_events() -> None:
     append_event("a", {})
     clear_events()

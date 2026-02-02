@@ -122,9 +122,14 @@ def create_app(config: dict[str, Any] | None = None) -> FastAPI:
         return {"postmortems": postmortems, "summary": summary}
 
     @app.get("/events")
-    async def api_events(since_ts: float | None = None, limit: int = 200) -> dict[str, Any]:
-        """时间轴事件：approval_requested / approval_resolved / limb_executed / postmortem。"""
-        return {"events": get_events(since_ts=since_ts, limit=limit)}
+    async def api_events(
+        since_ts: float | None = None,
+        limit: int = 200,
+        task_id: str | None = None,
+    ) -> dict[str, Any]:
+        """时间轴事件：approval_requested / approval_resolved / limb_executed / postmortem。task_id 可选，用于单任务回放。"""
+        events = get_events(since_ts=since_ts, limit=limit, task_id=task_id)
+        return {"events": events}
 
     class ApproveBody(BaseModel):
         approval_id: str

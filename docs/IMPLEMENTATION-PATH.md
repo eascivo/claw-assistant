@@ -275,7 +275,16 @@ claw-assistant/
 |------|------|
 | **README「扩展：新增 Limb」** | 三步：实现 execute_xxx、在 LIMB_REGISTRY 注册、在 config limbs + intent_tool_map 配置；当前已注册 content / ops / notify。 |
 
+### 已迭代：GET /events task_id 过滤（可回放小步）
+
+| 内容 | 说明 |
+|------|------|
+| **get_events(task_id=...)** | `governance/events.py` 增加可选参数 task_id；过滤 payload.task_id 等于该值的事件，供单任务回放。 |
+| **GET /events?task_id=xxx** | API 已支持 task_id 查询参数，委托 get_events(since_ts, limit, task_id) 返回过滤后列表。 |
+| **验收** | 单测 test_get_events_task_id；集成测 test_get_events_filter_by_task_id。 |
+
 ### Phase 3 再往后
 
 - **多 Limb 增强**：当前阶段已收尾（content / ops / notify 注册、intent_tool_map、扩展文档齐全）；后续按 [README 扩展：新增 Limb](README.md) 即可增加新 limb 与 intent_tool_map。
-- **商业闭环稳定**：可回放、可收敛；可观测可按需继续扩展。
+- **可回放小步**：GET /events 已支持 task_id 过滤，单任务回放 API 就绪；后续可做回放 UI 或按 task 聚合展示。
+- **商业闭环稳定**：可收敛；可观测可按需继续扩展。

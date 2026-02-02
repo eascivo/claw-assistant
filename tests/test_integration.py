@@ -129,6 +129,41 @@ async def test_events_api_after_run(app) -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_events_filter_by_task_id(app) -> None:
+    """GET /events?task_id=xxx 仅返回该 task 的事件，用于单任务回放。"""
+    from claw_assistant.governance.events import clear_events
+
+    clear_events()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=30.0) as client:
+        loop = asyncio.get_running_loop()
+        run_future = loop.create_future()
+
+        async def do_run() -> None:
+            r = await client.post("/run", json={"intent": "发布一条测试"})
+            run_future.set_result(r)
+
+        asyncio.create_task(do_run())
+        await asyncio.sleep(0.2)
+        pending = (await client.get("/status")).json().get("pending", [])
+        assert len(pending) >= 1
+        await client.post("/approve", json={"approval_id": pending[0]["approval_id"]})
+        await asyncio.wait_for(run_future, timeout=5.0)
+        r_all = await client.get("/events")
+    assert r_all.status_code == 200
+    events_all = r_all.json().get("events", [])
+    task_ids = [e.get("payload", {}).get("task_id") for e in events_all if e.get("payload", {}).get("task_id")]
+    assert task_ids, "events should contain at least one task_id"
+    target = task_ids[0]
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
+        r_filtered = await client.get("/events", params={"task_id": target})
+    assert r_filtered.status_code == 200
+    events_filtered = r_filtered.json().get("events", [])
+    assert all(e.get("payload", {}).get("task_id") == target for e in events_filtered)
+    assert len(events_filtered) <= len(events_all)
+
+
+@pytest.mark.asyncio
 async def test_run_experimental_no_approval_when_skip(app) -> None:
     """experimental 免审批：channels.experimental.require_approval=false（默认）时单次 POST 即返回成功，事件含 channel。"""
     from claw_assistant.governance.events import clear_events, get_events
