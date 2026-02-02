@@ -30,16 +30,21 @@ export default function DashboardPage() {
   const [pending, setPending] = useState<PendingItem[]>([]);
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [postmortems, setPostmortems] = useState<PostmortemItem[]>([]);
+  const [taskIds, setTaskIds] = useState<string[]>([]);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     setError(null);
+    const eventsUrl = selectedTaskId
+      ? `${API_BASE}/events?task_id=${encodeURIComponent(selectedTaskId)}&limit=100`
+      : `${API_BASE}/events?limit=100`;
     try {
       const [statusRes, eventsRes, postmortemsRes] = await Promise.all([
         fetch(`${API_BASE}/status`),
-        fetch(`${API_BASE}/events?limit=100`),
+        fetch(eventsUrl),
         fetch(`${API_BASE}/postmortems`),
       ]);
       if (!statusRes.ok) throw new Error(`status: ${statusRes.status}`);
@@ -48,9 +53,14 @@ export default function DashboardPage() {
       const statusData = await statusRes.json();
       const eventsData = await eventsRes.json();
       const postmortemsData = await postmortemsRes.json();
+      const eventList = eventsData.events ?? [];
       setPending(statusData.pending ?? []);
-      setEvents(eventsData.events ?? []);
+      setEvents(eventList);
       setPostmortems(postmortemsData.postmortems ?? []);
+      if (!selectedTaskId) {
+        const ids = [...new Set(eventList.map((e: TimelineEvent) => e.payload?.task_id).filter(Boolean) as string[])];
+        setTaskIds(ids);
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "请求失败";
       if (msg === "Failed to fetch" || msg.includes("fetch")) {
@@ -61,7 +71,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedTaskId]);
 
   useEffect(() => {
     fetchAll();
@@ -125,7 +135,24 @@ export default function DashboardPage() {
       </section>
 
       <section className="mb-8">
-        <h2 className="text-lg font-medium text-slate-700 mb-3">时间轴（最近 100 条）</h2>
+        <div className="flex items-center gap-3 mb-3 flex-wrap">
+          <h2 className="text-lg font-medium text-slate-700">时间轴（最近 100 条）</h2>
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            按任务回放
+            <select
+              value={selectedTaskId ?? ""}
+              onChange={(e) => setSelectedTaskId(e.target.value ? e.target.value : null)}
+              className="border border-slate-300 rounded px-2 py-1 bg-white text-slate-800"
+            >
+              <option value="">全部</option>
+              {taskIds.map((id) => (
+                <option key={id} value={id}>
+                  {id.slice(0, 8)}…
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         {events.length === 0 ? (
           <p className="text-slate-500 text-sm">暂无事件</p>
         ) : (

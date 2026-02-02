@@ -283,8 +283,72 @@ claw-assistant/
 | **GET /events?task_id=xxx** | API 已支持 task_id 查询参数，委托 get_events(since_ts, limit, task_id) 返回过滤后列表。 |
 | **验收** | 单测 test_get_events_task_id；集成测 test_get_events_filter_by_task_id。 |
 
+### 已迭代：回放 UI（Dashboard 按 task_id 下钻）
+
+| 内容 | 说明 |
+|------|------|
+| **时间轴筛选** | Dashboard 时间轴区块增加「按任务回放」下拉：选项为「全部」+ 当前事件中出现的 task_id（去重）；选「全部」时请求 GET /events?limit=100，选某 task_id 时请求 GET /events?task_id=xxx&limit=100。 |
+| **taskIds 来源** | 仅在「全部」模式下从返回事件中提取 payload.task_id 去重并更新下拉列表；单任务模式下保持上一轮列表，便于切回「全部」后仍可再选其他任务。 |
+| **验收** | 前端可选中某 task_id 后仅展示该任务事件；选「全部」恢复全局时间轴；npm run build 通过。 |
+
 ### Phase 3 再往后
 
 - **多 Limb 增强**：当前阶段已收尾（content / ops / notify 注册、intent_tool_map、扩展文档齐全）；后续按 [README 扩展：新增 Limb](README.md) 即可增加新 limb 与 intent_tool_map。
 - **可回放小步**：GET /events 已支持 task_id 过滤，单任务回放 API 就绪；后续可做回放 UI 或按 task 聚合展示。
 - **商业闭环稳定**：可收敛；可观测可按需继续扩展。
+
+---
+
+## 战略蓝图 vs 当前完成度对比
+
+**对照文档**：[SYSTEM-DESIGN.md](SYSTEM-DESIGN.md)（HOTL 主权 AI 执行系统：多脑 + 治理审计 + 本地执行集群）
+
+### 按 MVP 落地路径（不接 OpenClaw）的完成度
+
+| 阶段 | 蓝图内容 | 当前状态 | 完成度 |
+|------|----------|----------|--------|
+| **Phase 1** | 单 Brain-A；单 Limb（Content）；Proxy + 人工审批；World Checkpoint（占位） | 全部完成；且 Constitution、Checkpoint 校验器与复盘已实现 | **100%** |
+| **Phase 2** | Brain-B 影子测试；Constitution v1；Dashboard 时间轴 | channel main/experimental、experimental 免审批、Constitution forbid/restrict + 意图偏差（智谱）、事件存储 + GET /events、Dashboard 待审批+时间轴+复盘 | **100%** |
+| **Phase 3** | 多 Limb；自动复盘；商业闭环稳定 | 多 Limb、复盘持久化+告警、health/metrics、GET /events?task_id、**回放 UI（按 task 下钻）**；可收敛与更复杂监控未做 | **约 90%** |
+
+**整体 MVP（不含 OpenClaw）完成度：约 96%。**
+
+### 与全量战略蓝图的偏差
+
+| 维度 | 蓝图目标 | 当前实现 | 偏差说明 |
+|------|----------|----------|----------|
+| **Control 双脑** | OpenClaw Brain-A/B 多 agent，意图/任务由 agent 模型+workspace 产出 | 意图→单任务简单映射，无 OpenClaw；channel 仅区分 main/experimental 路由与审批策略 | **刻意脱耦**：MVP 不依赖 OpenClaw，便于本地闭环验证 |
+| **Commander** | IM Bot + Dashboard，经 OpenClaw Gateway WS/RPC（health、exec.approval、sessions） | 仅 Dashboard（Next.js）+ FastAPI HTTP API；无 IM Bot、无 Gateway WS | **未做**：IM Bot、Gateway 对接 |
+| **Governance** | OpenClaw Plugin（before/after_tool_call、exec 审批） | 独立 FastAPI + 内存 ApprovalManager + hooks；逻辑与蓝图一致，未寄生 OpenClaw | **形态不同**：能力对齐，部署形态独立 |
+| **Data / Limbs** | OpenClaw tools + Node/隧道，Limb 经 Gateway 调度 | 多 Limb 为进程内 stub，经 task_flow 直接调用；无 OpenClaw 工具注册与隧道 | **未做**：OpenClaw 工具注册与本地 Limb 隧道 |
+| **可回放** | Dashboard 从 session transcript + 审批事件做时间轴 | 事件存储 + GET /events（含 task_id 过滤）；Dashboard 时间轴 + 按 task_id 下拉筛选单任务回放 | **已补齐**：回放 API 与回放 UI 均已就绪 |
+| **可收敛** | 复盘回写、收益指标、告警后形成闭环 | 复盘持久化、summary、告警事件已做；「可收敛」指复盘驱动策略/参数调整的自动化，未实现 | **未做**：复盘→策略/参数自动收敛逻辑 |
+
+### 完成度小结
+
+- **相对 MVP 路径（IMPLEMENTATION-PATH 约定）**：Phase 1/2 已收尾，Phase 3 约 90%，**整体约 96%**。剩余：可收敛逻辑、可选更复杂监控。
+- **相对全量 SYSTEM-DESIGN**：核心治理与任务流、Dashboard 与可观测已对齐；**未覆盖**：OpenClaw 接入、IM Bot、Gateway WS/RPC、Limb 经 OpenClaw 调度与隧道。若按「全量蓝图」计，完成度约 **55%**（治理+数据流+Dashboard 为主，Control/Commander/Data 形态未接 OpenClaw）。
+
+---
+
+## 下一阶段 Roadmap（Phase 3 收尾 → Phase 4 选项）
+
+### 近期（Phase 3 收尾，约 1–2 周）
+
+| 优先级 | 项 | 说明 | 验收 |
+|--------|----|------|------|
+| ~~P1~~ | **回放 UI**（已完成） | Dashboard 支持按 task 查看：调用 GET /events?task_id=xxx，单任务时间轴下拉筛选 | 前端可选中某 task_id，仅展示该任务事件；见「已迭代：回放 UI」 |
+| P2 | **可收敛小步** | 定义「收敛」最小形态：例如复盘条数/偏差类型汇总 → 生成建议（如「提高 content 审批阈值」）写回 config 或仅展示给人类；或复盘→告警后人工改配置 | 文档定义 + 可选 API/UI 占位 |
+| P3 | **监控扩展** | 按需增加 GET /metrics 指标（如按 limb 的执行次数、按 channel 的 run 数）或告警渠道（如 Webhook） | 配置项 + 单测/集成测 |
+
+### 中期（Phase 4 方向选择，二选一或并行）
+
+| 方向 | 内容 | 依赖 |
+|------|------|------|
+| **A. 接 OpenClaw** | 将 Control 改为 OpenClaw 双 agent；Governance 改为 Plugin（before/after_tool_call）；审批对接 exec.approval；Dashboard/Commander 经 Gateway WS/RPC | OpenClaw 可用环境、Gateway 协议稳定 |
+| **B. 深化闭环（仍不接 OpenClaw）** | IM Bot（飞书/Telegram）对接当前 FastAPI 审批 API；复盘→策略建议或自动调参；Limb 实装（如 Content 接真实发布 API） | 产品确定优先 Limb 与收益指标 |
+
+### 建议
+
+- **先做完 Phase 3 收尾**：回放 UI + 可收敛定义（哪怕仅文档+占位），使「可回放、可收敛」在 MVP 内闭环可演示。
+- **再定 Phase 4**：根据 OpenClaw 落地节奏与业务优先级，决定先接 OpenClaw（A）还是先做 IM Bot + 真实 Limb（B）。
