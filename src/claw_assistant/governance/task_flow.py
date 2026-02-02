@@ -4,7 +4,7 @@ import logging
 import uuid
 from typing import Any
 
-from claw_assistant.config import get_channel_config, get_limb_config, load_config
+from claw_assistant.config import get_channel_config, get_limb_config, load_config, resolve_tool_from_intent
 from claw_assistant.governance.approval import ApprovalManager
 from claw_assistant.governance.checkpoint import schedule_checkpoint
 from claw_assistant.governance.events import append_event
@@ -20,15 +20,19 @@ async def run_task_flow(
     config: dict[str, Any] | None = None,
     session_key: str | None = None,
     channel: str = "main",
-    tool_name: str = "content",
+    tool_name: str | None = None,
 ) -> dict[str, Any]:
     """
     主任务流：生成任务 → Constitution 检查 → 若需审批则挂起并 wait → 幂等检查 → 执行 Limb → World Check 占位。
-    channel：main（生产）或 experimental（Brain-B 影子）；tool_name：路由到的 limb（如 content / ops）。
+    channel：main（生产）或 experimental（Brain-B 影子）；tool_name：路由到的 limb，None 或空时按 config.intent_tool_map 从 intent 推断。
     返回 { "ok": True, "result": ... } 或 { "ok": False, "error": ... } 或 { "ok": False, "block_reason": ... }；
     若需审批则在内部 register 后 await wait，通过后再执行。
     """
     config = config or load_config()
+    if not tool_name or not tool_name.strip():
+        tool_name = resolve_tool_from_intent(intent, config, default_tool="content")
+    else:
+        tool_name = tool_name.strip()
     task_id = str(uuid.uuid4())
     params: dict[str, Any] = {"summary": intent}
 

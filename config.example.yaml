@@ -29,6 +29,13 @@ channels:
   experimental:
     require_approval: false  # true 则 experimental 也需审批
 
+# 可选：未传 tool 时按 intent 推断 limb；列表按顺序匹配，先匹配先返回
+# intent_tool_map:
+#   - pattern: "发布|推送"
+#     tool: content
+#   - pattern: "部署|运维"
+#     tool: ops
+
 limbs:
   content:
     endpoint: "http://localhost:8080/limb/content"  # stub 由 daemon 自身提供

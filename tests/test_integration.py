@@ -125,3 +125,27 @@ async def test_run_tool_ops(app) -> None:
     body = r.json()
     assert body.get("ok") is True
     assert body.get("result", {}).get("limb") == "ops"
+
+
+@pytest.mark.asyncio
+async def test_run_tool_inferred_from_intent() -> None:
+    """未传 tool 时按 config.intent_tool_map 从 intent 推断 limb。"""
+    from tests.conftest import TEST_CONFIG
+
+    config = {
+        **TEST_CONFIG.copy(),
+        "intent_tool_map": [
+            {"pattern": r"发布|推送", "tool": "content"},
+            {"pattern": r"部署|运维", "tool": "ops"},
+        ],
+    }
+    from claw_assistant.server.app import create_app
+
+    app = create_app(config=config)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
+        r = await client.post("/run", json={"intent": "部署到生产", "channel": "experimental"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body.get("ok") is True
+    assert body.get("result", {}).get("limb") == "ops"

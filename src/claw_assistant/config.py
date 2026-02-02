@@ -1,5 +1,6 @@
-"""配置加载：YAML，limbs、require_approval 等。"""
+"""配置加载：YAML，limbs、require_approval、intent_tool_map 等。"""
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -80,3 +81,32 @@ def get_limb_config(config: dict[str, Any], tool_name: str) -> dict[str, Any] | 
     """返回指定 limb（工具名）的配置，不存在则返回 None。"""
     limbs = config.get("limbs") or {}
     return limbs.get(tool_name)
+
+
+def resolve_tool_from_intent(
+    intent: str,
+    config: dict[str, Any],
+    default_tool: str = "content",
+) -> str:
+    """
+    根据 intent 与 config.intent_tool_map 解析应使用的 limb（tool）。
+    intent_tool_map 为列表，每项 { pattern: "正则", tool: "content"|"ops" }，按顺序匹配，先匹配先返回；
+    无匹配或未配置时返回 default_tool。
+    """
+    intent = (intent or "").strip()
+    mapping = config.get("intent_tool_map") or []
+    if not isinstance(mapping, list):
+        return default_tool
+    for item in mapping:
+        if not isinstance(item, dict):
+            continue
+        pattern = item.get("pattern")
+        tool = item.get("tool")
+        if not pattern or not tool:
+            continue
+        try:
+            if re.search(pattern, intent):
+                return str(tool)
+        except re.error:
+            continue
+    return default_tool

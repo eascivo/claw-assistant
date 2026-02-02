@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from claw_assistant.config import load_config
+from claw_assistant.config import load_config, resolve_tool_from_intent
 from claw_assistant.governance.approval import ApprovalManager
 from claw_assistant.governance.checkpoint import get_postmortems
 from claw_assistant.governance.events import get_events
@@ -38,20 +38,21 @@ def create_app(config: dict[str, Any] | None = None) -> FastAPI:
     class RunBody(BaseModel):
         intent: str
         channel: str = "main"  # main | experimental（Brain-B 影子）
-        tool: str = "content"  # 路由到的 limb：content | ops 等
+        tool: str | None = None  # 路由到的 limb；省略时按 config.intent_tool_map 从 intent 推断
 
     @app.post("/run")
     async def api_run(body: RunBody) -> dict[str, Any]:
-        """发起一次任务流；若需审批会挂起直到 approve/reject。channel=experimental 为 Brain-B 影子；tool 指定 limb。"""
+        """发起一次任务流；若需审批会挂起直到 approve/reject。channel=experimental 为 Brain-B 影子；tool 省略时按 intent 推断 limb。"""
         manager: ApprovalManager = app.state.approval_manager
         run_config = getattr(app.state, "config", None) or load_config()
+        tool_name = body.tool if (body.tool is not None and body.tool.strip() != "") else None
         out = await run_task_flow(
             body.intent,
             approval_manager=manager,
             config=run_config,
             session_key=None,
             channel=body.channel,
-            tool_name=body.tool,
+            tool_name=tool_name,
         )
         if not out.get("ok") and "block_reason" in out:
             raise HTTPException(status_code=403, detail=out)

@@ -182,8 +182,17 @@ claw-assistant/
 |------|------|
 | **intent_deviation 接 LLM** | constitution.intent_deviation.provider=openai 等时调用 LLM 算意图偏差分；需 API key 与依赖。 |
 
+### 已迭代：intent → tool 映射
+
+| 内容 | 说明 |
+|------|------|
+| **config.intent_tool_map** | 可选列表，每项 `{ pattern: "正则", tool: "content"|"ops" }`，按顺序匹配 intent，先匹配先返回；未配置或无匹配时默认 content。 |
+| **resolve_tool_from_intent** | `config.py` 中实现；task_flow / API 在未传 tool（或 tool 为空）时调用，得到 limb。 |
+| **API / CLI** | `tool` 可选；省略时由服务端按 intent_tool_map 推断；显式传 tool 则覆盖。 |
+| **验收** | 单测 test_config.resolve_tool_from_intent_*、test_task_flow_tool_inferred_from_intent；集成 test_run_tool_inferred_from_intent。 |
+
 ### Phase 3 再往后
 
-- **多 Limb 增强**：intent → tool 映射、更多 limbs 注册与路由。
+- **多 Limb 增强**：更多 limbs 注册与路由、intent_tool_map 扩展。
 - **自动复盘**：World Checkpoint 回写长期记忆、收益指标与告警。
 - **商业闭环稳定**：可观测、可回放、可收敛。

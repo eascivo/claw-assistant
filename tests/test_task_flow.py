@@ -52,6 +52,26 @@ async def test_run_task_flow_tool_ops(config_no_approval: dict) -> None:
 
 
 @pytest.mark.asyncio
+async def test_run_task_flow_tool_inferred_from_intent(config_no_approval: dict) -> None:
+    """未传 tool_name 时按 config.intent_tool_map 从 intent 推断 limb。"""
+    config = {
+        **config_no_approval,
+        "limbs": {"content": {"require_approval": False}, "ops": {"require_approval": False}},
+        "intent_tool_map": [
+            {"pattern": r"发布|推送", "tool": "content"},
+            {"pattern": r"部署|运维", "tool": "ops"},
+        ],
+    }
+    manager = ApprovalManager()
+    out = await run_task_flow("部署到生产环境", manager, config=config, tool_name=None)
+    assert out.get("ok") is True
+    assert out["result"].get("limb") == "ops"
+    out2 = await run_task_flow("发布一条测试", manager, config=config, tool_name=None)
+    assert out2.get("ok") is True
+    assert out2["result"].get("limb") == "content"
+
+
+@pytest.mark.asyncio
 async def test_run_task_flow_unknown_limb(config_no_approval: dict) -> None:
     """多 Limb：未知 tool_name 返回 error。"""
     manager = ApprovalManager()
