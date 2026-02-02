@@ -10,29 +10,30 @@ Four planes: Commander → Double Brain → Governance → Multi-Limbs.
 
 ## 本地 MVP 快速开始
 
-当前仓库已实现**最小 MVP**（对齐 [SYSTEM-DESIGN.md](docs/SYSTEM-DESIGN.md) Phase 1）：单 Brain-A、单 Limb（Content）、Proxy + 人工审批、World Checkpoint 占位。
+当前仓库已实现**最小 MVP**（对齐 [SYSTEM-DESIGN.md](docs/SYSTEM-DESIGN.md) Phase 1）：单 Brain-A、单 Limb（Content）、Proxy + 人工审批、World Checkpoint 占位。技术栈：**Python**（FastAPI + Typer CLI）。
 
 ### 依赖
 
-- Go 1.22+
-- 配置文件：将 `config.example.yaml` 复制为 `config.yaml`（或使用仓库内已有 `config.yaml`）
+- Python 3.10+
+- 配置文件（可选）：将 `config.example.yaml` 复制为 `config.yaml` 后按需修改；不提供则使用内置默认配置。
 
-### 构建与运行
+### 安装与运行
 
 ```bash
-# 构建
-go build -o claw-assistant ./cmd/claw-assistant
+# 安装（开发模式）
+pip install -e .
 
 # 终端 1：启动 daemon
-./claw-assistant serve
+claw-assistant serve
+# 或：uvicorn claw_assistant.server.app:create_app --factory --host 0.0.0.0 --port 8080
 
 # 终端 2：发起一次任务（会挂起等待审批）
-./claw-assistant run "发布一条测试"
+claw-assistant run "发布一条测试"
 
 # 终端 3：查看待审批、解挂
-./claw-assistant status
-./claw-assistant approve <approvalId>
-# 或拒绝：./claw-assistant reject <approvalId>
+claw-assistant status
+claw-assistant approve <approvalId>
+# 或拒绝：claw-assistant reject <approvalId>
 ```
 
 解挂后，终端 2 会收到执行结果；Content Limb 当前为 stub，仅打 log。
@@ -41,8 +42,8 @@ go build -o claw-assistant ./cmd/claw-assistant
 
 | 命令 | 说明 |
 |------|------|
-| `serve [addr]` | 启动本地 HTTP daemon（默认 localhost:8080） |
-| `run [intent]` | 向 daemon 发起一次任务流 |
+| `serve [--host] [--port]` | 启动本地 HTTP daemon（默认 0.0.0.0:8080） |
+| `run <intent>` | 向 daemon 发起一次任务流 |
 | `status` | 列出待审批 |
 | `approve <id>` | 通过审批 |
 | `reject <id>` | 拒绝审批 |
@@ -50,7 +51,7 @@ go build -o claw-assistant ./cmd/claw-assistant
 ### 测试
 
 ```bash
-go test ./internal/governance/...
+pytest tests/ -v
 ```
 
 ---
