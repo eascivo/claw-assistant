@@ -10,7 +10,7 @@ Four planes: Commander → Double Brain → Governance → Multi-Limbs.
 
 ## 本地 MVP 快速开始
 
-当前仓库已实现**最小 MVP**（对齐 [SYSTEM-DESIGN.md](docs/SYSTEM-DESIGN.md) Phase 1）：单 Brain-A、单 Limb（Content）、Proxy + 人工审批、World Checkpoint 占位。技术栈：**Python**（FastAPI + Typer CLI）。
+当前仓库已实现**最小 MVP**（对齐 [SYSTEM-DESIGN.md](docs/SYSTEM-DESIGN.md) Phase 1）：单 Brain-A、单 Limb（Content）、Proxy + 人工审批；并已迭代 **Constitution 规则**（forbid/restrict）与 **World Checkpoint 真实校验**（校验器、偏差阈值、复盘与 `GET /postmortems`）。技术栈：**Python**（FastAPI + Typer CLI）。
 
 ### 依赖
 
@@ -47,6 +47,9 @@ claw-assistant approve <approvalId>
 | `status` | 列出待审批 |
 | `approve <id>` | 通过审批 |
 | `reject <id>` | 拒绝审批 |
+
+- **Constitution**：在 `config.yaml` 中配置 `constitution.forbid`（禁止执行的工具名）、`constitution.restrict`（必须走审批的工具）。
+- **World Checkpoint**：配置 `checkpoint.threshold`、`delay_seconds`；limb 可配置 `checkpoint: "content_stub"`；偏差超阈值会写复盘，可通过 `GET /postmortems` 查看。
 
 ### 测试
 

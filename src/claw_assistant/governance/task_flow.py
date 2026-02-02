@@ -1,10 +1,12 @@
-"""任务流：意图 → 宪法检查 → 审批（挂起/解挂）→ 幂等 → Limb 执行 → after_tool_call。"""
+"""任务流：意图 → 宪法检查 → 审批（挂起/解挂）→ 幂等 → Limb 执行 → after_tool_call → World Checkpoint。"""
 
 import logging
+import uuid
 from typing import Any
 
 from claw_assistant.config import get_limb_config, load_config
 from claw_assistant.governance.approval import ApprovalManager
+from claw_assistant.governance.checkpoint import schedule_checkpoint
 from claw_assistant.governance.hooks import after_tool_call, before_tool_call
 from claw_assistant.limbs import execute_limb
 
@@ -23,6 +25,7 @@ async def run_task_flow(
     若需审批则在内部 register 后 await wait，通过后再执行。
     """
     config = config or load_config()
+    task_id = str(uuid.uuid4())
     tool_name = "content"
     params: dict[str, Any] = {"summary": intent}
 
@@ -46,6 +49,7 @@ async def run_task_flow(
     # 幂等占位：Phase 1 不实现
     result = execute_limb(tool_name, params)
     after_tool_call(tool_name, params, result, config)
+    schedule_checkpoint(tool_name, params, result, task_id, config)
 
     if result.get("ok"):
         return {"ok": True, "result": result}

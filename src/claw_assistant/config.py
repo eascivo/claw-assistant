@@ -37,6 +37,18 @@ def _default_config() -> dict[str, Any]:
                 "priority": 5,
             }
         },
+        "constitution": {"forbid": [], "allow": [], "restrict": []},
+        "checkpoint": {"threshold": 0.5, "delay_seconds": 0},
+    }
+
+
+def get_constitution(config: dict[str, Any]) -> dict[str, Any]:
+    """返回 constitution 配置：forbid / allow / restrict。"""
+    c = config.get("constitution") or {}
+    return {
+        "forbid": c.get("forbid") or [],
+        "allow": c.get("allow") or [],
+        "restrict": c.get("restrict") or [],
     }
 
 

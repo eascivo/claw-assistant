@@ -30,3 +30,9 @@ alwaysApply: true
 ## 4. 完成即推送
 
 - **每完成一个功能**（单元测试与集成验证通过后）：提交并**推送到远程仓库**，保证远程与本地进度一致，便于协作与回溯。
+
+## 5. 下一步规划写进实现路径
+
+- **规划落地**：每完成一个阶段或重大功能后，将**下一步建议**写进 [docs/IMPLEMENTATION-PATH.md](docs/IMPLEMENTATION-PATH.md) 的「下一步规划」小节。
+- **内容**：下一阶段优先级（如 Phase 2：Dashboard 时间轴、Brain-B 影子测试）、依赖、可选增强；再往后 Phase 3 的简要条目。
+- **目的**：便于持续对齐 [SYSTEM-DESIGN.md](docs/SYSTEM-DESIGN.md)、协作与回溯，避免规划只留在对话里。

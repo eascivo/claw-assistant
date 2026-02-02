@@ -5,8 +5,20 @@ server:
   host: "0.0.0.0"
   port: 8080
 
+# 宪法规则：forbid=禁止执行的工具名；restrict=必须配置 require_approval 的工具
+constitution:
+  forbid: []   # 例如: ["delete_user_data"]
+  allow: []
+  restrict: []  # 例如: [{ action: "content", require_human: true }]
+
+# World Checkpoint：偏差阈值与延时（秒）
+checkpoint:
+  threshold: 0.5    # 相对偏差超过此值则写复盘
+  delay_seconds: 0 # 0=立即校验，>0=延时后校验
+
 limbs:
   content:
     endpoint: "http://localhost:8080/limb/content"  # stub 由 daemon 自身提供
     require_approval: true
     priority: 5
+    # checkpoint: "content_stub"  # 可选：启用 stub 校验器，params 可传 expectedWorldState，result 可含 mock_actual

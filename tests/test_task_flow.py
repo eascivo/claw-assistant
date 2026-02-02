@@ -57,6 +57,19 @@ async def test_run_task_flow_require_approval_then_approve(config_require_approv
 
 
 @pytest.mark.asyncio
+async def test_run_task_flow_constitution_block() -> None:
+    """Constitution forbid 时直接返回 block_reason。"""
+    manager = ApprovalManager()
+    config = {
+        "constitution": {"forbid": ["content"], "allow": [], "restrict": []},
+        "limbs": {"content": {"require_approval": False}},
+    }
+    out = await run_task_flow("发布一条测试", manager, config=config)
+    assert out.get("ok") is False
+    assert out.get("block_reason") == "constitution"
+
+
+@pytest.mark.asyncio
 async def test_run_task_flow_require_approval_then_reject(config_require_approval: dict) -> None:
     manager = ApprovalManager()
 

@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from claw_assistant.config import load_config
 from claw_assistant.governance.approval import ApprovalManager
+from claw_assistant.governance.checkpoint import get_postmortems
 from claw_assistant.governance.task_flow import run_task_flow
 
 
@@ -45,6 +46,11 @@ def create_app() -> FastAPI:
         manager: ApprovalManager = app.state.approval_manager
         pending = await manager.list_pending()
         return {"pending": pending}
+
+    @app.get("/postmortems")
+    async def api_postmortems() -> dict[str, Any]:
+        """列出 World Checkpoint 触发的复盘记录。"""
+        return {"postmortems": get_postmortems()}
 
     class ApproveBody(BaseModel):
         approval_id: str

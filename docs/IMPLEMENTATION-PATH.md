@@ -78,4 +78,38 @@ claw-assistant/
 - 终端 2：收到执行结果；Content Limb 的 log 可见（stub 输出）。
 - `pytest tests/` 全部通过。
 
-完成上述即视为 Phase 1 闭环完成，可再迭代 Constitution、World Checkpoint 真实校验与 OpenClaw 对接。
+完成上述即视为 Phase 1 闭环完成。
+
+---
+
+## 已迭代：Constitution + World Checkpoint
+
+| 内容 | 说明 |
+|------|------|
+| **Constitution** | 配置 `constitution.forbid` / `restrict`；`hooks.constitution_violation` 检查；forbid 一律禁止，restrict 项必须配置 `require_approval`。 |
+| **World Checkpoint** | 配置 `checkpoint.threshold`、`delay_seconds`；limb 可配置 `checkpoint: "content_stub"`；校验器注册 `register_validator`；偏差超阈值写复盘 `get_postmortems()`；API `GET /postmortems`。 |
+
+- **校验器**：`governance/checkpoint.py` 中 `content_stub` 从 `params.expectedWorldState` 与 `result.mock_actual` 取期望/实际值；生产可替换为真实 API（如粉丝数）。
+- **复盘**：内存列表，可扩展为 DB/向量库；Phase 1 提供 `GET /postmortems` 供 Dashboard 或人工查看。
+
+---
+
+## 下一步规划（Phase 2 / Phase 3）
+
+**每完成一个阶段或重大功能后，在此更新「下一步规划」小节，便于持续对齐 [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) 与协作。**
+
+### Phase 2 建议优先
+
+| 内容 | 说明 |
+|------|------|
+| **Dashboard 时间轴** | 事件存储（审批 requested/resolved、limb 执行、postmortem）→ FastAPI 读事件 API → **Next.js + Tailwind** 前端：待审批、任务列表、24h 决策回放时间轴、postmortems。先有态势看板再接 Brain-B 更清晰。 |
+| **Brain-B 影子测试** | 双 agent（main / experimental）；实验渠道任务先走 Brain-B，通过后再进 Brain-A 生产；依赖双 agent bindings 与任务路由。 |
+| **Constitution 可选增强** | 可选 LLM 意图偏差分（deviationScore > threshold 则拦截）。 |
+
+**依赖**：事件存储（内存 / Redis / SQLite 记录 approval、执行、postmortem）；Dashboard 后端读事件并暴露 API；前端连后端展示时间轴。
+
+### Phase 3 再往后
+
+- **多 Limb**：多 tools/skills 注册与路由。
+- **自动复盘**：World Checkpoint 回写长期记忆、收益指标与告警。
+- **商业闭环稳定**：可观测、可回放、可收敛。
