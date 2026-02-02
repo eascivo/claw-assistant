@@ -1,0 +1,11 @@
+---
+description: 项目语言偏好，优先使用 TypeScript 与 Python 实现
+alwaysApply: true
+---
+
+# 语言偏好
+
+- **新功能与模块**：仅使用 **TypeScript**（前端/Node/Next.js）或 **Python**（后端/脚本/FastAPI）实现，不使用 Go。
+- **前端 / Dashboard**：使用 TypeScript（Next.js + Tailwind），与 [SYSTEM-DESIGN.md](docs/SYSTEM-DESIGN.md) 中 Dashboard 选型一致。
+- **后端 / 服务 / 脚本**：使用 Python（如 FastAPI、CLI 脚本），便于与 AI/LLM 生态集成。
+- **实现范围**：Dashboard 前端、后端、Plugin 侧逻辑、Constitution/Checkpoint、daemon 与 governance 等均用 TypeScript 或 Python 实现。

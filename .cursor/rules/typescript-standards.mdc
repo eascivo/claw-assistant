@@ -1,0 +1,36 @@
+---
+description: TypeScript 编码规范与错误处理
+globs: "**/*.ts,**/*.tsx"
+alwaysApply: false
+---
+
+# TypeScript 规范
+
+## 风格与类型
+
+- 使用严格模式：`"strict": true`，避免 `any`，必要时用 `unknown` 或明确类型。
+- 优先 `interface` 定义对象形状，类型导出供复用。
+- 异步统一用 `async/await`，Promise 链仅在不便 await 时使用。
+
+## 错误处理
+
+```typescript
+// ❌ 忽略错误
+try {
+  await fetchData();
+} catch (e) {}
+
+// ✅ 记录并向上抛出
+try {
+  await fetchData();
+} catch (e) {
+  logger.error('fetch failed', { error: e });
+  throw new DataFetchError('unable to retrieve data', { cause: e });
+}
+```
+
+## React / Next.js
+
+- 使用函数组件与 Hooks；可复用逻辑抽成自定义 Hook。
+- 服务端组件优先（Next.js App Router）；客户端组件仅在需要交互或浏览器 API 时使用。
+- 样式与组件同目录或使用 Tailwind，与系统设计中的 Dashboard 选型一致。

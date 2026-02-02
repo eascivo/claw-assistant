@@ -1,0 +1,38 @@
+---
+description: Python 编码规范与错误处理
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# Python 规范
+
+## 风格
+
+- 遵循 PEP 8；行宽可放宽至 100，保持可读性。
+- 类型注解：在公开 API、函数参数与返回值上使用 typing（如 `list[str]`、`dict[str, Any]`）。
+- 用 `pathlib.Path` 处理路径，避免手写字符串拼接。
+
+## 错误处理
+
+- 不吞异常：至少 `logger.exception()` 或重新 `raise`，必要时用 `raise ... from e` 保留链。
+- 错误信息小写、简洁，句末不加句号（与项目 Go 规则一致）。
+
+```python
+# ❌ 吞掉异常
+try:
+    result = fetch_data()
+except Exception:
+    pass
+
+# ✅ 记录并向上抛
+try:
+    result = fetch_data()
+except RequestError as e:
+    logger.exception("fetch failed")
+    raise DataFetchError("unable to retrieve data") from e
+```
+
+## 异步与 API
+
+- 异步逻辑使用 `async def` 与 `await`；FastAPI 路由可 `async def` 以兼容异步依赖。
+- 资源使用上下文管理器或 `try/finally`，确保连接/文件关闭。
