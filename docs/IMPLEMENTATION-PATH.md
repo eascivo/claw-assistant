@@ -333,6 +333,13 @@ claw-assistant/
 | **GET /convergence/suggestions** | 占位 API：调用 get_postmortems(config) 与 get_convergence_suggestions(postmortems, config)，返回 `{ "suggestions": [...] }`。 |
 | **验收** | 单测 test_convergence.get_convergence_suggestions_*；集成测 test_get_convergence_suggestions。 |
 
+### 已迭代：Dashboard 展示可收敛建议
+
+| 内容 | 说明 |
+|------|------|
+| **可收敛建议区块** | Dashboard 增加「可收敛建议」区块：与待审批/时间轴/复盘同一轮询，请求 GET /convergence/suggestions，展示 suggestions 列表（id、text、source）。 |
+| **验收** | npm run build 通过；与复盘同频刷新，无建议时显示「暂无建议」。 |
+
 ### Phase 3 再往后
 
 - **多 Limb 增强**：当前阶段已收尾（content / ops / notify 注册、intent_tool_map、扩展文档齐全）；后续按 [README 扩展：新增 Limb](README.md) 即可增加新 limb 与 intent_tool_map。
@@ -396,4 +403,4 @@ claw-assistant/
 - **Phase 3 收尾已完成**：回放 UI、可收敛小步、监控扩展、告警渠道 Webhook 均已完成。
 - **IM 预留接口已完成**：IMNotifier、get_notifier、FeishuNotifier stub；审批挂起时可选调用 send_approval_request。**飞书实装**：接 Webhook 或发消息 API、解析用户审批指令（事件订阅）待做；所需见 [FEISHU-INTEGRATION.md](FEISHU-INTEGRATION.md)。
 - **OpenClaw**：仍在准备中，暂不列入近期必做；准备就绪后再按 Roadmap 方向 A 排期。
-- **之后可选**：Dashboard 展示 GET /convergence/suggestions、可收敛扩展（写回 config/自动调参）等。
+- **之后可选**：可收敛扩展（写回 config/自动调参）等；Dashboard 已展示 GET /convergence/suggestions。

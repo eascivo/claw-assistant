@@ -26,10 +26,17 @@ interface PostmortemItem {
   deviation: number;
 }
 
+interface SuggestionItem {
+  id: string;
+  text: string;
+  source: string;
+}
+
 export default function DashboardPage() {
   const [pending, setPending] = useState<PendingItem[]>([]);
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [postmortems, setPostmortems] = useState<PostmortemItem[]>([]);
+  const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
   const [taskIds, setTaskIds] = useState<string[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,21 +49,25 @@ export default function DashboardPage() {
       ? `${API_BASE}/events?task_id=${encodeURIComponent(selectedTaskId)}&limit=100`
       : `${API_BASE}/events?limit=100`;
     try {
-      const [statusRes, eventsRes, postmortemsRes] = await Promise.all([
+      const [statusRes, eventsRes, postmortemsRes, suggestionsRes] = await Promise.all([
         fetch(`${API_BASE}/status`),
         fetch(eventsUrl),
         fetch(`${API_BASE}/postmortems`),
+        fetch(`${API_BASE}/convergence/suggestions`),
       ]);
       if (!statusRes.ok) throw new Error(`status: ${statusRes.status}`);
       if (!eventsRes.ok) throw new Error(`events: ${eventsRes.status}`);
       if (!postmortemsRes.ok) throw new Error(`postmortems: ${postmortemsRes.status}`);
+      if (!suggestionsRes.ok) throw new Error(`convergence: ${suggestionsRes.status}`);
       const statusData = await statusRes.json();
       const eventsData = await eventsRes.json();
       const postmortemsData = await postmortemsRes.json();
+      const suggestionsData = await suggestionsRes.json();
       const eventList = eventsData.events ?? [];
       setPending(statusData.pending ?? []);
       setEvents(eventList);
       setPostmortems(postmortemsData.postmortems ?? []);
+      setSuggestions((suggestionsData.suggestions ?? []) as SuggestionItem[]);
       if (!selectedTaskId) {
         const ids = [...new Set(eventList.map((e: TimelineEvent) => e.payload?.task_id).filter(Boolean) as string[])];
         setTaskIds(ids);
@@ -173,7 +184,7 @@ export default function DashboardPage() {
         )}
       </section>
 
-      <section>
+      <section className="mb-8">
         <h2 className="text-lg font-medium text-slate-700 mb-3">复盘（World Checkpoint）</h2>
         {postmortems.length === 0 ? (
           <p className="text-slate-500 text-sm">暂无复盘</p>
@@ -189,6 +200,29 @@ export default function DashboardPage() {
                 <span className="ml-2">
                   期望 {pm.expected} 实际 {pm.actual} 偏差 {(pm.deviation * 100).toFixed(1)}%
                 </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section>
+        <h2 className="text-lg font-medium text-slate-700 mb-3">可收敛建议</h2>
+        <p className="text-slate-500 text-xs mb-2">基于复盘与告警阈值的策略建议（供人工决策或后续自动调参）</p>
+        {suggestions.length === 0 ? (
+          <p className="text-slate-500 text-sm">暂无建议</p>
+        ) : (
+          <ul className="space-y-2">
+            {suggestions.map((s) => (
+              <li
+                key={s.id}
+                className="p-3 bg-sky-50 border border-sky-200 rounded text-sm"
+              >
+                <span className="font-mono text-xs text-slate-500">{s.id}</span>
+                <span className="ml-2 text-slate-700">{s.text}</span>
+                {s.source && (
+                  <span className="ml-2 text-slate-400 text-xs">来源: {s.source}</span>
+                )}
               </li>
             ))}
           </ul>
