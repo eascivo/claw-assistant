@@ -265,11 +265,11 @@ claw-assistant/
 
 | 内容 | 说明 |
 |------|------|
-| **GET /metrics** | 返回 `postmortem_total`、`postmortem_last_24h`、`pending_count`、`events_count`，供监控/可观测。 |
-| **get_events_count()** | `governance/events.py` 中实现，返回当前事件总数。 |
-| **验收** | 集成测 test_get_metrics 断言 events_count 存在且为 int。 |
+| **GET /metrics** | 返回 `postmortem_total`、`postmortem_last_24h`、`pending_count`、`events_count`、`run_count`，供监控/可观测。 |
+| **get_events_count() / get_run_count()** | `governance/events.py` 中实现；run_count 为 limb_executed 事件数。 |
+| **验收** | 集成测 test_get_metrics 断言 events_count、run_count 存在且为 int。 |
 
 ### Phase 3 再往后
 
 - **多 Limb 增强**：更多 limbs 注册、intent_tool_map 扩展。
-- **商业闭环稳定**：可回放、可收敛；可观测可继续扩展（如 run_count 等）。
+- **商业闭环稳定**：可回放、可收敛；可观测可按需继续扩展。

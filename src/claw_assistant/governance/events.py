@@ -33,6 +33,11 @@ def get_events_count() -> int:
     return len(_events)
 
 
+def get_run_count() -> int:
+    """返回已完成执行次数（limb_executed 事件数），供 GET /metrics 等可观测用。"""
+    return sum(1 for e in _events if e.get("type") == "limb_executed")
+
+
 def clear_events() -> None:
     """清空事件（仅测试用）。"""
     global _events
