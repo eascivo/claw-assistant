@@ -19,9 +19,11 @@ async def run_task_flow(
     approval_manager: ApprovalManager,
     config: dict[str, Any] | None = None,
     session_key: str | None = None,
+    channel: str = "main",
 ) -> dict[str, Any]:
     """
     主任务流：生成任务 → Constitution 检查 → 若需审批则挂起并 wait → 幂等检查 → 执行 Limb → World Check 占位。
+    channel：main（生产）或 experimental（Brain-B 影子）；事件与结果带 channel 标记。
     返回 { "ok": True, "result": ... } 或 { "ok": False, "error": ... } 或 { "ok": False, "block_reason": ... }；
     若需审批则在内部 register 后 await wait，通过后再执行。
     """
@@ -52,11 +54,18 @@ async def run_task_flow(
     result = execute_limb(tool_name, params)
     append_event(
         "limb_executed",
-        {"task_id": task_id, "tool_name": tool_name, "summary": params.get("summary", ""), "ok": result.get("ok")},
+        {
+            "task_id": task_id,
+            "tool_name": tool_name,
+            "summary": params.get("summary", ""),
+            "ok": result.get("ok"),
+            "channel": channel,
+        },
     )
     after_tool_call(tool_name, params, result, config)
     schedule_checkpoint(tool_name, params, result, task_id, config)
 
     if result.get("ok"):
-        return {"ok": True, "result": result}
+        result_with_channel = {**result, "channel": channel}
+        return {"ok": True, "result": result_with_channel}
     return {"ok": False, "error": result.get("error", "limb execution failed")}

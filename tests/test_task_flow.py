@@ -41,6 +41,27 @@ async def test_run_task_flow_no_approval(config_no_approval: dict) -> None:
 
 
 @pytest.mark.asyncio
+async def test_run_task_flow_channel_experimental(config_no_approval: dict) -> None:
+    """Brain-B 影子：channel=experimental 时结果与事件带 channel 标记。"""
+    from claw_assistant.governance.events import clear_events, get_events
+
+    clear_events()
+    manager = ApprovalManager()
+    out = await run_task_flow(
+        "影子测试",
+        manager,
+        config=config_no_approval,
+        channel="experimental",
+    )
+    assert out.get("ok") is True
+    assert out["result"].get("channel") == "experimental"
+    events = get_events()
+    limb_events = [e for e in events if e.get("type") == "limb_executed"]
+    assert len(limb_events) >= 1
+    assert limb_events[-1]["payload"].get("channel") == "experimental"
+
+
+@pytest.mark.asyncio
 async def test_run_task_flow_require_approval_then_approve(config_require_approval: dict) -> None:
     manager = ApprovalManager()
 

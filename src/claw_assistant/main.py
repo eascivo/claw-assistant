@@ -24,16 +24,33 @@ def serve(
 def run(
     intent: str = typer.Argument(..., help="任务意图，如：发布一条测试"),
     base: str = typer.Option(DEFAULT_BASE, "--base", "-b", help="daemon 基地址"),
+    channel: str = typer.Option("main", "--channel", "-c", help="main（生产）或 experimental（Brain-B 影子）"),
 ) -> None:
     """向 daemon 发起一次任务流；若需审批会挂起直到 approve/reject。"""
+    typer.echo("正在发起任务（如需人工审批将在此等待，请另开终端执行 status 与 approve <id>）…")
     with Client(base_url=base, timeout=300.0, trust_env=False) as client:
         try:
-            r = client.post("/run", json={"intent": intent})
+            r = client.post("/run", json={"intent": intent, "channel": channel})
             r.raise_for_status()
             data = r.json()
             if data.get("ok"):
-                typer.echo("执行完成:")
-                typer.echo(data.get("result", data))
+                result = data.get("result", data)
+                typer.echo("执行完成")
+                if isinstance(result, dict):
+                    limb = result.get("limb", "")
+                    msg = result.get("message", "")
+                    summary = result.get("summary", "")
+                    ch = result.get("channel", "")
+                    if ch:
+                        typer.echo(f"  channel: {ch}")
+                    if limb or msg:
+                        typer.echo(f"  {limb}: {msg}".strip(": "))
+                    if summary:
+                        typer.echo(f"  摘要: {summary}")
+                    if not (ch or limb or msg or summary):
+                        typer.echo(result)
+                else:
+                    typer.echo(result)
             else:
                 typer.echo("执行失败:", err=True)
                 typer.echo(data, err=True)

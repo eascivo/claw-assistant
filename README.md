@@ -43,7 +43,7 @@ claw-assistant approve <approvalId>
 | 命令 | 说明 |
 |------|------|
 | `serve [--host] [--port]` | 启动本地 HTTP daemon（默认 0.0.0.0:8080） |
-| `run <intent>` | 向 daemon 发起一次任务流 |
+| `run <intent> [--channel main\|experimental]` | 向 daemon 发起一次任务流；channel=experimental 为 Brain-B 影子 |
 | `status` | 列出待审批 |
 | `approve <id>` | 通过审批 |
 | `reject <id>` | 拒绝审批 |

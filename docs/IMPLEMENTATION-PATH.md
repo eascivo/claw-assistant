@@ -122,6 +122,18 @@ claw-assistant/
 
 ---
 
+## 已迭代：Brain-B 影子测试（channel 区分）
+
+| 内容 | 说明 |
+|------|------|
+| **channel 参数** | `run_task_flow(..., channel="main"|"experimental")`；POST /run 支持 `channel`，CLI `run --channel experimental`。 |
+| **事件与结果** | limb_executed 事件 payload 含 `channel`；返回 result 含 `channel`，便于 Dashboard/时间轴区分生产与影子。 |
+| **审批** | main 与 experimental 共用同一审批流（require_approval 由 config 决定）；后续可配置 experimental 免审批仅记录。 |
+
+- **验收**：`claw-assistant run --channel experimental "影子测试"`（或 approve 后）返回 `channel: experimental`；GET /events 中 limb_executed 含 `channel`。
+
+---
+
 ## 下一步规划（Phase 2 剩余 / Phase 3）
 
 **每完成一个阶段或重大功能后，在此更新「下一步规划」小节。**
@@ -130,8 +142,8 @@ claw-assistant/
 
 | 内容 | 说明 |
 |------|------|
-| **Brain-B 影子测试** | 双 agent（main / experimental）；实验渠道任务先走 Brain-B，通过后再进 Brain-A 生产；依赖双 agent bindings 与任务路由。 |
 | **Constitution 可选增强** | 可选 LLM 意图偏差分（deviationScore > threshold 则拦截）。 |
+| **experimental 免审批** | 配置项：experimental channel 不挂起审批，仅执行并记录事件，供影子测试。 |
 
 ### Phase 3 再往后
 

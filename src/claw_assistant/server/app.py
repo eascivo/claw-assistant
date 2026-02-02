@@ -34,16 +34,18 @@ def create_app() -> FastAPI:
 
     class RunBody(BaseModel):
         intent: str
+        channel: str = "main"  # main | experimental（Brain-B 影子）
 
     @app.post("/run")
     async def api_run(body: RunBody) -> dict[str, Any]:
-        """发起一次任务流；若需审批会挂起直到 approve/reject。成功与被拒绝均返回 200，body 内 ok 区分。"""
+        """发起一次任务流；若需审批会挂起直到 approve/reject。channel=experimental 为 Brain-B 影子。"""
         manager: ApprovalManager = app.state.approval_manager
         out = await run_task_flow(
             body.intent,
             approval_manager=manager,
             config=load_config(),
             session_key=None,
+            channel=body.channel,
         )
         if not out.get("ok") and "block_reason" in out:
             raise HTTPException(status_code=403, detail=out)

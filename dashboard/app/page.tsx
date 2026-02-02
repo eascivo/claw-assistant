@@ -52,7 +52,12 @@ export default function DashboardPage() {
       setEvents(eventsData.events ?? []);
       setPostmortems(postmortemsData.postmortems ?? []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "请求失败");
+      const msg = e instanceof Error ? e.message : "请求失败";
+      if (msg === "Failed to fetch" || msg.includes("fetch")) {
+        setError(`无法连接 API。请先启动 daemon：claw-assistant serve（默认 ${API_BASE}）`);
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -75,9 +80,13 @@ export default function DashboardPage() {
   return (
     <main className="max-w-5xl mx-auto p-6">
       <h1 className="text-2xl font-semibold text-slate-800 mb-2">claw-assistant 态势看板</h1>
-      <p className="text-slate-500 text-sm mb-6">
+      <p className="text-slate-500 text-sm mb-2">
         待审批、时间轴、复盘 · API: {API_BASE}
+        {error && <span className="ml-2 text-red-600">· 连接失败</span>}
+        {!error && !loading && <span className="ml-2 text-emerald-600">· 连接正常</span>}
+        {!error && loading && <span className="ml-2 text-slate-400">· 检查中…</span>}
       </p>
+      <p className="text-slate-400 text-xs mb-4">每 5 秒自动刷新</p>
       <button
         type="button"
         onClick={fetchAll}
@@ -88,7 +97,10 @@ export default function DashboardPage() {
       </button>
       {error && (
         <div className="mb-4 p-3 bg-red-50 text-red-700 rounded text-sm">
-          {error}
+          <p className="font-medium">{error}</p>
+          <p className="mt-1 text-slate-500 text-xs">
+            在项目根目录执行：<code className="bg-slate-200 px-1 rounded">claw-assistant serve</code>
+          </p>
         </div>
       )}
 

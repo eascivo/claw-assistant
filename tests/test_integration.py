@@ -101,3 +101,33 @@ async def test_events_api_after_run(app) -> None:
     assert "approval_requested" in types
     assert "approval_resolved" in types
     assert "limb_executed" in types
+
+
+@pytest.mark.asyncio
+async def test_run_experimental_channel(app) -> None:
+    """POST /run channel=experimental 返回结果带 channel；事件 payload 含 channel。"""
+    from claw_assistant.governance.events import clear_events, get_events
+
+    clear_events()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=30.0) as client:
+        loop = asyncio.get_running_loop()
+        run_future = loop.create_future()
+
+        async def do_run() -> None:
+            r = await client.post("/run", json={"intent": "影子测试", "channel": "experimental"})
+            run_future.set_result(r)
+
+        asyncio.create_task(do_run())
+        await asyncio.sleep(0.2)
+        pending = (await client.get("/status")).json().get("pending", [])
+        assert len(pending) >= 1
+        await client.post("/approve", json={"approval_id": pending[0]["approval_id"]})
+        r_run = await asyncio.wait_for(run_future, timeout=5.0)
+    assert r_run.status_code == 200
+    body = r_run.json()
+    assert body.get("ok") is True
+    assert body.get("result", {}).get("channel") == "experimental"
+    events = get_events()
+    limb_events = [e for e in events if e.get("type") == "limb_executed" and e.get("payload", {}).get("channel") == "experimental"]
+    assert len(limb_events) >= 1
