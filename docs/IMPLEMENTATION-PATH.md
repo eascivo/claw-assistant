@@ -246,8 +246,15 @@ claw-assistant/
 | **_write_postmortem** | 当 config.checkpoint.alert_after_postmortem_count 存在且 total >= 阈值时，append_event("postmortem_alert", { total, threshold })，供时间轴/告警消费。 |
 | **验收** | 单测 test_run_checkpoint_postmortem_alert_event；GET /events 可见 postmortem_alert 类型。 |
 
+### 已迭代：last_24h 指标
+
+| 内容 | 说明 |
+|------|------|
+| **复盘 entry.created_at** | _write_postmortem 写入时增加 created_at（time.time()），便于按时间过滤。 |
+| **GET /postmortems summary.last_24h** | 过去 24 小时内 created_at 的复盘条数；无 created_at 的条目（如旧文件）不计入。 |
+| **验收** | 集成测 test_get_postmortems_returns_summary 断言 summary.last_24h 存在且 last_24h <= total。 |
+
 ### Phase 3 再往后
 
 - **多 Limb 增强**：更多 limbs 注册、intent_tool_map 扩展。
-- **自动复盘扩展**：last_24h 等指标。
 - **商业闭环稳定**：可观测、可回放、可收敛。

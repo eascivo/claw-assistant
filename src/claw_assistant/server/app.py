@@ -74,11 +74,16 @@ def create_app(config: dict[str, Any] | None = None) -> FastAPI:
 
     @app.get("/postmortems")
     async def api_postmortems() -> dict[str, Any]:
-        """列出 World Checkpoint 触发的复盘记录（内存 + 可选 JSONL 文件合并）；summary 含 total 与可选告警。"""
+        """列出 World Checkpoint 触发的复盘记录（内存 + 可选 JSONL 文件合并）；summary 含 total、last_24h 与可选告警。"""
+        import time
+
         run_config = getattr(app.state, "config", None) or load_config()
         postmortems = get_postmortems(run_config)
         total = len(postmortems)
-        summary: dict[str, Any] = {"total": total}
+        now = time.time()
+        cutoff_24h = now - 86400.0
+        last_24h = sum(1 for e in postmortems if e.get("created_at", 0) >= cutoff_24h)
+        summary: dict[str, Any] = {"total": total, "last_24h": last_24h}
         cfg = run_config.get("checkpoint") or {}
         threshold = cfg.get("alert_after_postmortem_count")
         if threshold is not None:

@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import time
 from pathlib import Path
 from typing import Any, Callable
 
@@ -104,6 +105,7 @@ def _write_postmortem(
         "deviation": deviation,
         "params": params,
         "result": result,
+        "created_at": time.time(),
     }
     _postmortems.append(entry)
     append_event(

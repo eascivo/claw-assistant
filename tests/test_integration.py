@@ -178,8 +178,11 @@ async def test_get_postmortems_returns_summary(app) -> None:
     assert "postmortems" in data
     assert "summary" in data
     assert "total" in data["summary"]
+    assert "last_24h" in data["summary"]
     assert isinstance(data["summary"]["total"], int)
+    assert isinstance(data["summary"]["last_24h"], int)
     assert data["summary"]["total"] == len(data["postmortems"])
+    assert data["summary"]["last_24h"] <= data["summary"]["total"]
 
 
 @pytest.mark.asyncio
