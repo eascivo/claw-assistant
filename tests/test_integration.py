@@ -128,6 +128,18 @@ async def test_run_tool_ops(app) -> None:
 
 
 @pytest.mark.asyncio
+async def test_run_tool_notify(app) -> None:
+    """POST /run tool=notify 时路由到 notify limb，免审批即返回。"""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
+        r = await client.post("/run", json={"intent": "通知用户", "channel": "experimental", "tool": "notify"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body.get("ok") is True
+    assert body.get("result", {}).get("limb") == "notify"
+
+
+@pytest.mark.asyncio
 async def test_run_tool_inferred_from_intent() -> None:
     """未传 tool 时按 config.intent_tool_map 从 intent 推断 limb。"""
     from tests.conftest import TEST_CONFIG
@@ -137,6 +149,7 @@ async def test_run_tool_inferred_from_intent() -> None:
         "intent_tool_map": [
             {"pattern": r"发布|推送", "tool": "content"},
             {"pattern": r"部署|运维", "tool": "ops"},
+            {"pattern": r"通知|提醒", "tool": "notify"},
         ],
     }
     from claw_assistant.server.app import create_app
@@ -145,7 +158,10 @@ async def test_run_tool_inferred_from_intent() -> None:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
         r = await client.post("/run", json={"intent": "部署到生产", "channel": "experimental"})
-    assert r.status_code == 200
-    body = r.json()
-    assert body.get("ok") is True
-    assert body.get("result", {}).get("limb") == "ops"
+        assert r.status_code == 200
+        body = r.json()
+        assert body.get("ok") is True
+        assert body.get("result", {}).get("limb") == "ops"
+        r2 = await client.post("/run", json={"intent": "提醒管理员", "channel": "experimental"})
+        assert r2.status_code == 200
+        assert r2.json().get("result", {}).get("limb") == "notify"

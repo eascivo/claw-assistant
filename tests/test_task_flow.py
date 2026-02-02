@@ -52,14 +52,37 @@ async def test_run_task_flow_tool_ops(config_no_approval: dict) -> None:
 
 
 @pytest.mark.asyncio
+async def test_run_task_flow_tool_notify(config_no_approval: dict) -> None:
+    """多 Limb：tool_name=notify 时路由到 notify limb。"""
+    config = {
+        **config_no_approval,
+        "limbs": {
+            "content": {"require_approval": False},
+            "ops": {"require_approval": False},
+            "notify": {"require_approval": False},
+        },
+    }
+    manager = ApprovalManager()
+    out = await run_task_flow("通知用户", manager, config=config, tool_name="notify")
+    assert out.get("ok") is True
+    assert out["result"].get("limb") == "notify"
+    assert out["result"].get("summary") == "通知用户"
+
+
+@pytest.mark.asyncio
 async def test_run_task_flow_tool_inferred_from_intent(config_no_approval: dict) -> None:
     """未传 tool_name 时按 config.intent_tool_map 从 intent 推断 limb。"""
     config = {
         **config_no_approval,
-        "limbs": {"content": {"require_approval": False}, "ops": {"require_approval": False}},
+        "limbs": {
+            "content": {"require_approval": False},
+            "ops": {"require_approval": False},
+            "notify": {"require_approval": False},
+        },
         "intent_tool_map": [
             {"pattern": r"发布|推送", "tool": "content"},
             {"pattern": r"部署|运维", "tool": "ops"},
+            {"pattern": r"通知|提醒", "tool": "notify"},
         ],
     }
     manager = ApprovalManager()
@@ -69,6 +92,9 @@ async def test_run_task_flow_tool_inferred_from_intent(config_no_approval: dict)
     out2 = await run_task_flow("发布一条测试", manager, config=config, tool_name=None)
     assert out2.get("ok") is True
     assert out2["result"].get("limb") == "content"
+    out3 = await run_task_flow("通知用户上线", manager, config=config, tool_name=None)
+    assert out3.get("ok") is True
+    assert out3["result"].get("limb") == "notify"
 
 
 @pytest.mark.asyncio

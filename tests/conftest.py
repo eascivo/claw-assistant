@@ -24,6 +24,11 @@ TEST_CONFIG = {
             "require_approval": False,
             "priority": 5,
         },
+        "notify": {
+            "endpoint": "http://localhost:8080/limb/notify",
+            "require_approval": False,
+            "priority": 5,
+        },
     },
 }
 

@@ -39,6 +39,8 @@ channels:
 #     tool: content
 #   - pattern: "部署|运维"
 #     tool: ops
+#   - pattern: "通知|提醒"
+#     tool: notify
 
 limbs:
   content:
@@ -48,5 +50,9 @@ limbs:
     # checkpoint: "content_stub"  # 可选：启用 stub 校验器，params 可传 expectedWorldState，result 可含 mock_actual
   ops:
     endpoint: "http://localhost:8080/limb/ops"
+    require_approval: false
+    priority: 5
+  notify:
+    endpoint: "http://localhost:8080/limb/notify"
     require_approval: false
     priority: 5

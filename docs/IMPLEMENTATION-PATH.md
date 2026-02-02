@@ -216,8 +216,17 @@ claw-assistant/
 | **lifespan 启动** | FastAPI lifespan 内若 config.checkpoint.postmortem_sink=file，调用 load_postmortems_from_file_into_memory，重启后 GET /postmortems 即含历史复盘。 |
 | **验收** | 单测 test_load_postmortems_from_file_into_memory。 |
 
+### 已迭代：多 Limb 增强（notify stub）
+
+| 内容 | 说明 |
+|------|------|
+| **notify limb** | `limbs/notify.py` stub；LIMB_REGISTRY 注册 content / ops / notify。 |
+| **config.example** | limbs.notify + intent_tool_map 示例「通知\|提醒」→ notify。 |
+| **TEST_CONFIG** | conftest 含 limbs.notify；单测/集成测 tool=notify、intent 推断 notify。 |
+| **验收** | test_run_task_flow_tool_notify、test_run_tool_notify、test_run_tool_inferred_from_intent 含 notify。 |
+
 ### Phase 3 再往后
 
-- **多 Limb 增强**：更多 limbs 注册与路由、intent_tool_map 扩展。
+- **多 Limb 增强**：更多 limbs 注册、intent_tool_map 扩展。
 - **自动复盘扩展**：收益指标与告警。
 - **商业闭环稳定**：可观测、可回放、可收敛。
