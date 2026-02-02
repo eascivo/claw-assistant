@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from claw_assistant.config import load_config, resolve_tool_from_intent
 from claw_assistant.governance.approval import ApprovalManager
 from claw_assistant.governance.checkpoint import get_postmortems, load_postmortems_from_file_into_memory
+from claw_assistant.governance.convergence import get_convergence_suggestions
 from claw_assistant.governance.events import get_events, get_events_count, get_run_count
 from claw_assistant.governance.task_flow import run_task_flow
 
@@ -130,6 +131,14 @@ def create_app(config: dict[str, Any] | None = None) -> FastAPI:
         """时间轴事件：approval_requested / approval_resolved / limb_executed / postmortem。task_id 可选，用于单任务回放。"""
         events = get_events(since_ts=since_ts, limit=limit, task_id=task_id)
         return {"events": events}
+
+    @app.get("/convergence/suggestions")
+    async def api_convergence_suggestions() -> dict[str, Any]:
+        """可收敛占位：根据复盘与告警配置返回建议列表；供 Dashboard 展示或人工决策，后续可扩展自动调参。"""
+        run_config = getattr(app.state, "config", None) or load_config()
+        postmortems = get_postmortems(run_config)
+        suggestions = get_convergence_suggestions(postmortems, run_config)
+        return {"suggestions": suggestions}
 
     class ApproveBody(BaseModel):
         approval_id: str

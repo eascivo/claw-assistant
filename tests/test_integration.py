@@ -38,6 +38,18 @@ async def test_get_metrics(app) -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_convergence_suggestions(app) -> None:
+    """GET /convergence/suggestions 返回 200 与 suggestions 列表（可收敛占位）。"""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
+        r = await client.get("/convergence/suggestions")
+    assert r.status_code == 200
+    data = r.json()
+    assert "suggestions" in data
+    assert isinstance(data["suggestions"], list)
+
+
+@pytest.mark.asyncio
 async def test_run_then_approve_flow(app) -> None:
     """POST /run 挂起 → GET /status 有记录 → POST /approve 解挂 → /run 返回成功。"""
     transport = ASGITransport(app=app)

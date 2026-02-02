@@ -291,6 +291,22 @@ claw-assistant/
 | **taskIds 来源** | 仅在「全部」模式下从返回事件中提取 payload.task_id 去重并更新下拉列表；单任务模式下保持上一轮列表，便于切回「全部」后仍可再选其他任务。 |
 | **验收** | 前端可选中某 task_id 后仅展示该任务事件；选「全部」恢复全局时间轴；npm run build 通过。 |
 
+### 可收敛（最小形态）文档定义
+
+| 内容 | 说明 |
+|------|------|
+| **输入** | 复盘条数（get_postmortems）、告警阈值（config.checkpoint.alert_after_postmortem_count）；后续可扩展偏差类型汇总、按 limb 统计等。 |
+| **输出** | 建议列表，每项 `{ "id", "text", "source" }`；供 Dashboard 展示或人工决策；后续可扩展写回 config、自动调参。 |
+| **流程** | 复盘/告警 → 汇总（如 total ≥ threshold）→ 生成建议文案 → 返回 API；人类根据建议改配置或确认，形成「可收敛」闭环。 |
+
+### 已迭代：可收敛小步（文档定义 + 占位 API）
+
+| 内容 | 说明 |
+|------|------|
+| **get_convergence_suggestions(postmortems, config)** | `governance/convergence.py`：根据复盘条数与 alert_after_postmortem_count 生成占位建议；total ≥ 阈值时返回一条「建议检查 checkpoint 阈值或复盘原因」。 |
+| **GET /convergence/suggestions** | 占位 API：调用 get_postmortems(config) 与 get_convergence_suggestions(postmortems, config)，返回 `{ "suggestions": [...] }`。 |
+| **验收** | 单测 test_convergence.get_convergence_suggestions_*；集成测 test_get_convergence_suggestions。 |
+
 ### Phase 3 再往后
 
 - **多 Limb 增强**：当前阶段已收尾（content / ops / notify 注册、intent_tool_map、扩展文档齐全）；后续按 [README 扩展：新增 Limb](README.md) 即可增加新 limb 与 intent_tool_map。
@@ -309,9 +325,9 @@ claw-assistant/
 |------|----------|----------|--------|
 | **Phase 1** | 单 Brain-A；单 Limb（Content）；Proxy + 人工审批；World Checkpoint（占位） | 全部完成；且 Constitution、Checkpoint 校验器与复盘已实现 | **100%** |
 | **Phase 2** | Brain-B 影子测试；Constitution v1；Dashboard 时间轴 | channel main/experimental、experimental 免审批、Constitution forbid/restrict + 意图偏差（智谱）、事件存储 + GET /events、Dashboard 待审批+时间轴+复盘 | **100%** |
-| **Phase 3** | 多 Limb；自动复盘；商业闭环稳定 | 多 Limb、复盘持久化+告警、health/metrics、GET /events?task_id、**回放 UI（按 task 下钻）**；可收敛与更复杂监控未做 | **约 90%** |
+| **Phase 3** | 多 Limb；自动复盘；商业闭环稳定 | 多 Limb、复盘持久化+告警、health/metrics、回放 UI、**可收敛小步（文档+占位 API）**；可收敛扩展与更复杂监控未做 | **约 92%** |
 
-**整体 MVP（不含 OpenClaw）完成度：约 96%。**
+**整体 MVP（不含 OpenClaw）完成度：约 97%。**
 
 ### 与全量战略蓝图的偏差
 
@@ -322,11 +338,11 @@ claw-assistant/
 | **Governance** | OpenClaw Plugin（before/after_tool_call、exec 审批） | 独立 FastAPI + 内存 ApprovalManager + hooks；逻辑与蓝图一致，未寄生 OpenClaw | **形态不同**：能力对齐，部署形态独立 |
 | **Data / Limbs** | OpenClaw tools + Node/隧道，Limb 经 Gateway 调度 | 多 Limb 为进程内 stub，经 task_flow 直接调用；无 OpenClaw 工具注册与隧道 | **未做**：OpenClaw 工具注册与本地 Limb 隧道 |
 | **可回放** | Dashboard 从 session transcript + 审批事件做时间轴 | 事件存储 + GET /events（含 task_id 过滤）；Dashboard 时间轴 + 按 task_id 下拉筛选单任务回放 | **已补齐**：回放 API 与回放 UI 均已就绪 |
-| **可收敛** | 复盘回写、收益指标、告警后形成闭环 | 复盘持久化、summary、告警事件已做；「可收敛」指复盘驱动策略/参数调整的自动化，未实现 | **未做**：复盘→策略/参数自动收敛逻辑 |
+| **可收敛** | 复盘回写、收益指标、告警后形成闭环 | 复盘持久化、summary、告警事件已做；**可收敛最小形态**：文档定义 + GET /convergence/suggestions 占位（复盘 ≥ 阈值时返回建议）；自动写回 config 未做 | **小步已做**：文档 + 占位 API；扩展为自动调参/写回 config 待后续 |
 
 ### 完成度小结
 
-- **相对 MVP 路径（IMPLEMENTATION-PATH 约定）**：Phase 1/2 已收尾，Phase 3 约 90%，**整体约 96%**。剩余：可收敛逻辑、可选更复杂监控。
+- **相对 MVP 路径（IMPLEMENTATION-PATH 约定）**：Phase 1/2 已收尾，Phase 3 约 92%，**整体约 97%**。剩余：可收敛扩展（写回 config/自动调参）、可选更复杂监控。
 - **相对全量 SYSTEM-DESIGN**：核心治理与任务流、Dashboard 与可观测已对齐；**未覆盖**：OpenClaw 接入、IM Bot、Gateway WS/RPC、Limb 经 OpenClaw 调度与隧道。若按「全量蓝图」计，完成度约 **55%**（治理+数据流+Dashboard 为主，Control/Commander/Data 形态未接 OpenClaw）。
 
 ---
@@ -338,7 +354,7 @@ claw-assistant/
 | 优先级 | 项 | 说明 | 验收 |
 |--------|----|------|------|
 | ~~P1~~ | **回放 UI**（已完成） | Dashboard 支持按 task 查看：调用 GET /events?task_id=xxx，单任务时间轴下拉筛选 | 前端可选中某 task_id，仅展示该任务事件；见「已迭代：回放 UI」 |
-| P2 | **可收敛小步** | 定义「收敛」最小形态：例如复盘条数/偏差类型汇总 → 生成建议（如「提高 content 审批阈值」）写回 config 或仅展示给人类；或复盘→告警后人工改配置 | 文档定义 + 可选 API/UI 占位 |
+| ~~P2~~ | **可收敛小步**（已完成） | 定义「收敛」最小形态（输入/输出/流程）；GET /convergence/suggestions 占位 API；复盘 ≥ 阈值时返回一条建议 | 文档定义 + 占位 API；见「已迭代：可收敛小步」 |
 | P3 | **监控扩展** | 按需增加 GET /metrics 指标（如按 limb 的执行次数、按 channel 的 run 数）或告警渠道（如 Webhook） | 配置项 + 单测/集成测 |
 
 ### 中期（Phase 4 方向选择，二选一或并行）
