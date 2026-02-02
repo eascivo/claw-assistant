@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from claw_assistant.config import load_config, resolve_tool_from_intent
 from claw_assistant.governance.approval import ApprovalManager
-from claw_assistant.governance.checkpoint import get_postmortems
+from claw_assistant.governance.checkpoint import get_postmortems, load_postmortems_from_file_into_memory
 from claw_assistant.governance.events import get_events
 from claw_assistant.governance.task_flow import run_task_flow
 
@@ -20,6 +20,13 @@ def create_app(config: dict[str, Any] | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
+        # 可选：启动时从 JSONL 加载复盘到内存（config.checkpoint.postmortem_sink=file 时）
+        run_config = getattr(_app.state, "config", None) or load_config()
+        if (run_config.get("checkpoint") or {}).get("postmortem_sink") == "file":
+            n = load_postmortems_from_file_into_memory(run_config)
+            if n:
+                import logging
+                logging.getLogger(__name__).info("postmortems loaded from file: %d", n)
         yield
         # 可在此做清理
 

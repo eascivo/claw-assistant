@@ -72,6 +72,20 @@ def clear_postmortems() -> None:
     _postmortems.clear()
 
 
+def load_postmortems_from_file_into_memory(config: dict[str, Any] | None = None) -> int:
+    """
+    将 JSONL 文件中的复盘加载到内存（可选启动时调用）。
+    当 checkpoint.postmortem_sink=file 时从文件读取并 extend 到 _postmortems。
+    返回本次加载的条数。
+    """
+    config = config or load_config()
+    entries = _load_postmortems_from_file(config)
+    if not entries:
+        return 0
+    _postmortems.extend(entries)
+    return len(entries)
+
+
 def _write_postmortem(
     tool_name: str,
     task_id: str,

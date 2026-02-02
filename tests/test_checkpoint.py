@@ -9,6 +9,7 @@ from claw_assistant.governance.checkpoint import (
     clear_postmortems,
     deviation,
     get_postmortems,
+    load_postmortems_from_file_into_memory,
     run_checkpoint,
 )
 
@@ -125,6 +126,31 @@ def test_get_postmortems_merges_file_sink() -> None:
         post3 = get_postmortems(config)
         assert len(post3) == 1
         assert post3[0]["expected"] == 99  # 内存优先
+    finally:
+        path.unlink(missing_ok=True)
+        clear_postmortems()
+
+
+def test_load_postmortems_from_file_into_memory() -> None:
+    """启动时从 JSONL 加载到内存：load_postmortems_from_file_into_memory 将文件条目 extend 到 _postmortems。"""
+    clear_postmortems()
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
+        path = Path(f.name)
+        f.write(
+            json.dumps(
+                {"task_id": "startup-1", "tool_name": "content", "expected": 1, "actual": 2, "deviation": 1.0, "params": {}, "result": {}},
+                ensure_ascii=False,
+            )
+            + "\n"
+        )
+    try:
+        config = {"checkpoint": {"postmortem_sink": "file", "postmortem_file_path": str(path)}}
+        n = load_postmortems_from_file_into_memory(config)
+        assert n == 1
+        from claw_assistant.governance.checkpoint import _postmortems
+        assert len(_postmortems) == 1
+        assert _postmortems[0]["task_id"] == "startup-1"
+        assert get_postmortems(config)[0]["task_id"] == "startup-1"
     finally:
         path.unlink(missing_ok=True)
         clear_postmortems()

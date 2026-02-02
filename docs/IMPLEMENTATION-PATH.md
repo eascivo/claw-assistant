@@ -208,8 +208,16 @@ claw-assistant/
 | **GET /postmortems** | 使用 run_config 调用 get_postmortems(config)，返回内存 + 文件中的复盘。 |
 | **验收** | 单测 test_get_postmortems_merges_file_sink；重启后或跨进程可通过文件看到历史复盘。 |
 
+### 已迭代：启动时从 JSONL 加载复盘到内存
+
+| 内容 | 说明 |
+|------|------|
+| **load_postmortems_from_file_into_memory(config)** | 将 JSONL 文件中的复盘 extend 到 _postmortems，返回本次加载条数；sink=file 时生效。 |
+| **lifespan 启动** | FastAPI lifespan 内若 config.checkpoint.postmortem_sink=file，调用 load_postmortems_from_file_into_memory，重启后 GET /postmortems 即含历史复盘。 |
+| **验收** | 单测 test_load_postmortems_from_file_into_memory。 |
+
 ### Phase 3 再往后
 
 - **多 Limb 增强**：更多 limbs 注册与路由、intent_tool_map 扩展。
-- **自动复盘扩展**：收益指标与告警、可选从文件加载到内存（启动时）。
+- **自动复盘扩展**：收益指标与告警。
 - **商业闭环稳定**：可观测、可回放、可收敛。
