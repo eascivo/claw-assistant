@@ -37,7 +37,12 @@ def _default_config() -> dict[str, Any]:
                 "priority": 5,
             }
         },
-        "constitution": {"forbid": [], "allow": [], "restrict": []},
+        "constitution": {
+            "forbid": [],
+            "allow": [],
+            "restrict": [],
+            "intent_deviation": {"enabled": False, "threshold": 0.5},
+        },
         "checkpoint": {"threshold": 0.5, "delay_seconds": 0},
         "channels": {"experimental": {"require_approval": False}},
     }
@@ -53,12 +58,18 @@ def get_channel_config(config: dict[str, Any], channel_name: str) -> dict[str, A
 
 
 def get_constitution(config: dict[str, Any]) -> dict[str, Any]:
-    """返回 constitution 配置：forbid / allow / restrict。"""
+    """返回 constitution 配置：forbid / allow / restrict / intent_deviation。"""
     c = config.get("constitution") or {}
+    dev = c.get("intent_deviation") or {}
     return {
         "forbid": c.get("forbid") or [],
         "allow": c.get("allow") or [],
         "restrict": c.get("restrict") or [],
+        "intent_deviation": {
+            "enabled": dev.get("enabled", False),
+            "threshold": float(dev.get("threshold", 0.5)),
+            "stub_score": dev.get("stub_score"),  # 测试用；未设则后续可接 LLM
+        },
     }
 
 

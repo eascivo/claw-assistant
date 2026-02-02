@@ -5,11 +5,16 @@ server:
   host: "0.0.0.0"
   port: 8080
 
-# 宪法规则：forbid=禁止执行的工具名；restrict=必须配置 require_approval 的工具
+# 宪法规则：forbid=禁止执行的工具名；restrict=必须配置 require_approval 的工具；intent_deviation=可选意图偏差分
 constitution:
   forbid: []   # 例如: ["delete_user_data"]
   allow: []
   restrict: []  # 例如: [{ action: "content", require_human: true }]
+  # 意图偏差分：enabled 且 score > threshold 则拦截；stub_score 仅测试用，后续可接 LLM
+  intent_deviation:
+    enabled: false
+    threshold: 0.5
+    # stub_score: 0.0  # 测试时设为 1.0 可强制拦截
 
 # World Checkpoint：偏差阈值与延时（秒）
 checkpoint:

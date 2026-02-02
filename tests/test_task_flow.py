@@ -103,6 +103,23 @@ async def test_run_task_flow_constitution_block() -> None:
 
 
 @pytest.mark.asyncio
+async def test_run_task_flow_intent_deviation_block(config_no_approval: dict) -> None:
+    """Constitution intent_deviation 启用且 stub_score > threshold 时拦截。"""
+    config = {
+        **config_no_approval,
+        "constitution": {
+            "forbid": [],
+            "restrict": [],
+            "intent_deviation": {"enabled": True, "threshold": 0.5, "stub_score": 1.0},
+        },
+    }
+    manager = ApprovalManager()
+    out = await run_task_flow("发布一条测试", manager, config=config)
+    assert out.get("ok") is False
+    assert out.get("block_reason") == "constitution"
+
+
+@pytest.mark.asyncio
 async def test_run_task_flow_require_approval_then_reject(config_require_approval: dict) -> None:
     manager = ApprovalManager()
 

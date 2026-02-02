@@ -27,6 +27,22 @@ def before_tool_call(
     return False, None, params
 
 
+def _intent_deviation_score(tool_name: str, params: dict[str, Any], config: dict[str, Any]) -> float | None:
+    """
+    意图偏差分（0~1）；未启用或无得分时返回 None。
+    当前支持 stub_score（测试用）；后续可接 LLM（constitution.intent_deviation.provider）。
+    """
+    rules = get_constitution(config)
+    dev = rules.get("intent_deviation") or {}
+    if not dev.get("enabled"):
+        return None
+    stub = dev.get("stub_score")
+    if stub is not None:
+        return float(stub)
+    # 后续：if dev.get("provider") == "openai": call LLM; return score
+    return None
+
+
 def constitution_violation(
     tool_name: str,
     params: dict[str, Any],
@@ -36,6 +52,7 @@ def constitution_violation(
     宪法规则检查。
     - forbid: 工具名在此列表则一律禁止。
     - restrict: 工具名在此列表则必须配置 require_approval，否则禁止。
+    - intent_deviation: 可选；enabled 且偏差分 > threshold 则禁止（当前支持 stub_score，后续可接 LLM）。
     - allow: 仅作白名单参考，当前不强制（与 forbid 配合时可扩展）。
     """
     rules = get_constitution(config)
@@ -46,6 +63,11 @@ def constitution_violation(
     if tool_name in restrict_actions:
         limb = get_limb_config(config, tool_name)
         if not limb or not limb.get("require_approval"):
+            return True
+    score = _intent_deviation_score(tool_name, params, config)
+    if score is not None:
+        threshold = float((rules.get("intent_deviation") or {}).get("threshold", 0.5))
+        if score > threshold:
             return True
     return False
 

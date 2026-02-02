@@ -50,3 +50,45 @@ def test_constitution_restrict_action_list_format() -> None:
         "limbs": {"content": {"require_approval": True}},
     }
     assert constitution_violation("content", {}, config) is False
+
+
+def test_constitution_intent_deviation_stub_blocks() -> None:
+    """意图偏差分：enabled + stub_score > threshold 则拦截。"""
+    config = {
+        "constitution": {
+            "forbid": [],
+            "restrict": [],
+            "intent_deviation": {"enabled": True, "threshold": 0.5, "stub_score": 1.0},
+        },
+        "limbs": {"content": {"require_approval": True}},
+    }
+    assert constitution_violation("content", {"summary": "x"}, config) is True
+    block, reason, _ = before_tool_call("content", {"summary": "x"}, config)
+    assert block is True
+    assert reason == "constitution"
+
+
+def test_constitution_intent_deviation_stub_passes() -> None:
+    """意图偏差分：stub_score <= threshold 不拦截。"""
+    config = {
+        "constitution": {
+            "forbid": [],
+            "restrict": [],
+            "intent_deviation": {"enabled": True, "threshold": 0.5, "stub_score": 0.0},
+        },
+        "limbs": {"content": {"require_approval": True}},
+    }
+    assert constitution_violation("content", {"summary": "x"}, config) is False
+
+
+def test_constitution_intent_deviation_disabled() -> None:
+    """意图偏差分：enabled=false 时不检查偏差。"""
+    config = {
+        "constitution": {
+            "forbid": [],
+            "restrict": [],
+            "intent_deviation": {"enabled": False, "threshold": 0.5, "stub_score": 1.0},
+        },
+        "limbs": {"content": {}},
+    }
+    assert constitution_violation("content", {}, config) is False

@@ -150,11 +150,27 @@ claw-assistant/
 
 **每完成一个阶段或重大功能后，在此更新「下一步规划」小节。**
 
-### Phase 2 剩余建议
+---
+
+## 已迭代：Constitution 意图偏差分（可选）
 
 | 内容 | 说明 |
 |------|------|
-| **Constitution 可选增强** | 可选 LLM 意图偏差分（deviationScore > threshold 则拦截）。 |
+| **intent_deviation 配置** | `constitution.intent_deviation.enabled`、`threshold`、`stub_score`（测试用）；未设 stub_score 时后续可接 LLM。 |
+| **hooks** | `_intent_deviation_score` 返回 stub_score 或 None；`constitution_violation` 中 score > threshold 则拦截。 |
+| **验收** | `intent_deviation.enabled=true` 且 `stub_score=1.0`、`threshold=0.5` 时 run 返回 block_reason constitution；单测 test_constitution_intent_deviation_*、test_run_task_flow_intent_deviation_block。 |
+
+---
+
+## 下一步规划（Phase 2 收尾 / Phase 3）
+
+**每完成一个阶段或重大功能后，在此更新「下一步规划」小节。**
+
+### Phase 2 收尾（可选）
+
+| 内容 | 说明 |
+|------|------|
+| **intent_deviation 接 LLM** | constitution.intent_deviation.provider=openai 等时调用 LLM 算意图偏差分；需 API key 与依赖。 |
 
 ### Phase 3 再往后
 
