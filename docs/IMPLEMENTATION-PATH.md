@@ -225,8 +225,15 @@ claw-assistant/
 | **TEST_CONFIG** | conftest 含 limbs.notify；单测/集成测 tool=notify、intent 推断 notify。 |
 | **验收** | test_run_task_flow_tool_notify、test_run_tool_notify、test_run_tool_inferred_from_intent 含 notify。 |
 
+### 已迭代：GET /postmortems 收益指标小步（summary）
+
+| 内容 | 说明 |
+|------|------|
+| **GET /postmortems** | 响应增加 `summary: { total: N }`，N 为复盘条数；供 Dashboard/告警做收益指标用。 |
+| **验收** | 集成测 test_get_postmortems_returns_summary；Dashboard 仍用 postmortems 列表，兼容。 |
+
 ### Phase 3 再往后
 
 - **多 Limb 增强**：更多 limbs 注册、intent_tool_map 扩展。
-- **自动复盘扩展**：收益指标与告警。
+- **自动复盘扩展**：告警（如 total 超阈值）、last_24h 等指标。
 - **商业闭环稳定**：可观测、可回放、可收敛。

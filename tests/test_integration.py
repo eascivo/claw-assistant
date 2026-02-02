@@ -165,3 +165,18 @@ async def test_run_tool_inferred_from_intent() -> None:
         r2 = await client.post("/run", json={"intent": "提醒管理员", "channel": "experimental"})
         assert r2.status_code == 200
         assert r2.json().get("result", {}).get("limb") == "notify"
+
+
+@pytest.mark.asyncio
+async def test_get_postmortems_returns_summary(app) -> None:
+    """GET /postmortems 返回 postmortems 与 summary（含 total），供收益指标/告警用。"""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
+        r = await client.get("/postmortems")
+    assert r.status_code == 200
+    data = r.json()
+    assert "postmortems" in data
+    assert "summary" in data
+    assert "total" in data["summary"]
+    assert isinstance(data["summary"]["total"], int)
+    assert data["summary"]["total"] == len(data["postmortems"])
