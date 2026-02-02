@@ -162,6 +162,16 @@ claw-assistant/
 
 ---
 
+## 已迭代：多 Limb + 集成测试鲁棒性
+
+| 内容 | 说明 |
+|------|------|
+| **多 Limb** | ops stub（`limbs/ops.py`）、`run`/API 支持可选 `tool`（content \| ops）、task_flow 按 `tool_name` 路由；`config.example.yaml` 含 limbs.content 与 limbs.ops。 |
+| **集成测试鲁棒性** | `tests/conftest.py` 定义 `TEST_CONFIG`（content 需审批、experimental 免审批、intent_deviation 关闭）；`create_app(config=None)` 支持注入配置，集成测试通过 `app` fixture 使用 `create_app(config=TEST_CONFIG)`，与项目根 `config.yaml` 隔离。 |
+| **验收** | `pytest tests/` 全部通过；任意本地 config（含智谱等）不影响集成测试结果。 |
+
+---
+
 ## 下一步规划（Phase 2 收尾 / Phase 3）
 
 **每完成一个阶段或重大功能后，在此更新「下一步规划」小节。**
@@ -174,6 +184,6 @@ claw-assistant/
 
 ### Phase 3 再往后
 
-- **多 Limb**：多 tools/skills 注册与路由。
+- **多 Limb 增强**：intent → tool 映射、更多 limbs 注册与路由。
 - **自动复盘**：World Checkpoint 回写长期记忆、收益指标与告警。
 - **商业闭环稳定**：可观测、可回放、可收敛。

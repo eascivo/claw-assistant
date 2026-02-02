@@ -1,15 +1,9 @@
-"""端到端集成测试：run → status → approve → 校验结果。"""
+"""端到端集成测试：run → status → approve → 校验结果。app 使用 tests/conftest.py 注入的 TEST_CONFIG。"""
 
 import asyncio
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from claw_assistant.server.app import create_app
-
-
-@pytest.fixture
-def app():
-    return create_app()
 
 
 @pytest.mark.asyncio
@@ -119,3 +113,15 @@ async def test_run_experimental_no_approval_when_skip(app) -> None:
     events = get_events()
     limb_events = [e for e in events if e.get("type") == "limb_executed" and e.get("payload", {}).get("channel") == "experimental"]
     assert len(limb_events) >= 1
+
+
+@pytest.mark.asyncio
+async def test_run_tool_ops(app) -> None:
+    """POST /run tool=ops 时路由到 ops limb，免审批即返回。"""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
+        r = await client.post("/run", json={"intent": "部署测试", "channel": "experimental", "tool": "ops"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body.get("ok") is True
+    assert body.get("result", {}).get("limb") == "ops"

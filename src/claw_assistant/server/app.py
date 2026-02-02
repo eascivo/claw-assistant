@@ -14,7 +14,8 @@ from claw_assistant.governance.events import get_events
 from claw_assistant.governance.task_flow import run_task_flow
 
 
-def create_app() -> FastAPI:
+def create_app(config: dict[str, Any] | None = None) -> FastAPI:
+    """创建 FastAPI 应用；config 非空时作为注入配置（测试用），否则从 load_config() 读取。"""
     approval_manager = ApprovalManager()
 
     @asynccontextmanager
@@ -31,21 +32,26 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.state.approval_manager = approval_manager
+    if config is not None:
+        app.state.config = config
 
     class RunBody(BaseModel):
         intent: str
         channel: str = "main"  # main | experimental（Brain-B 影子）
+        tool: str = "content"  # 路由到的 limb：content | ops 等
 
     @app.post("/run")
     async def api_run(body: RunBody) -> dict[str, Any]:
-        """发起一次任务流；若需审批会挂起直到 approve/reject。channel=experimental 为 Brain-B 影子。"""
+        """发起一次任务流；若需审批会挂起直到 approve/reject。channel=experimental 为 Brain-B 影子；tool 指定 limb。"""
         manager: ApprovalManager = app.state.approval_manager
+        run_config = getattr(app.state, "config", None) or load_config()
         out = await run_task_flow(
             body.intent,
             approval_manager=manager,
-            config=load_config(),
+            config=run_config,
             session_key=None,
             channel=body.channel,
+            tool_name=body.tool,
         )
         if not out.get("ok") and "block_reason" in out:
             raise HTTPException(status_code=403, detail=out)
