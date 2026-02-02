@@ -1,4 +1,7 @@
-"""意图偏差分：智谱等 LLM 调用。API key 用环境变量，base_url 可配置或 env 覆盖。"""
+"""意图偏差分：智谱等 LLM 调用。API key 用环境变量，base_url 可配置或 env 覆盖。
+
+扩展其他 LLM（如 OpenAI）：在本模块新增 intent_deviation_score_xxx(tool_name, params, config) -> float | None，
+在 hooks._intent_deviation_score 中按 config.constitution.intent_deviation.provider 分支调用即可。"""
 
 import logging
 import os
