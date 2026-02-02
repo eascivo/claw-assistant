@@ -127,6 +127,15 @@ def _write_postmortem(
                     f.write(json.dumps(entry, ensure_ascii=False) + "\n")
             except OSError as e:
                 logger.warning("postmortem file append failed: %s", e)
+        # 可选：复盘条数超阈值时写入告警事件，供时间轴/告警消费
+        alert_threshold = cfg.get("alert_after_postmortem_count")
+        if alert_threshold is not None:
+            try:
+                n = int(alert_threshold)
+                if len(_postmortems) >= n:
+                    append_event("postmortem_alert", {"total": len(_postmortems), "threshold": n})
+            except (TypeError, ValueError):
+                pass
 
 
 def deviation(expected: float, actual: float) -> float:

@@ -78,6 +78,27 @@ async def test_run_checkpoint_content_stub_deviation_over_threshold() -> None:
 
 
 @pytest.mark.asyncio
+async def test_run_checkpoint_postmortem_alert_event() -> None:
+    """复盘触发且 total >= alert_after_postmortem_count 时，写入 postmortem_alert 事件。"""
+    from claw_assistant.governance.events import clear_events, get_events
+
+    clear_postmortems()
+    clear_events()
+    config = {
+        "limbs": {"content": {"checkpoint": "content_stub"}},
+        "checkpoint": {"threshold": 0.5, "alert_after_postmortem_count": 1},
+    }
+    params = {"expectedWorldState": 100}
+    result = {"ok": True, "mock_actual": 40}
+    await run_checkpoint("content", params, result, "t-alert", config)
+    events = get_events()
+    alert_events = [e for e in events if e.get("type") == "postmortem_alert"]
+    assert len(alert_events) >= 1
+    assert alert_events[0]["payload"]["total"] >= 1
+    assert alert_events[0]["payload"]["threshold"] == 1
+
+
+@pytest.mark.asyncio
 async def test_run_checkpoint_postmortem_file_sink() -> None:
     """复盘触发时若 checkpoint.postmortem_sink=file，则追加写入 JSONL 文件。"""
     clear_postmortems()

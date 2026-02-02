@@ -239,8 +239,15 @@ claw-assistant/
 | **checkpoint.alert_after_postmortem_count** | 可选；复盘条数 >= 此值时 GET /postmortems 的 summary.alert 为 true，summary.alert_threshold 为配置值。 |
 | **验收** | 集成测 test_get_postmortems_summary_alert_when_over_threshold；config.example 注释示例。 |
 
+### 已迭代：告警事件写入 events
+
+| 内容 | 说明 |
+|------|------|
+| **_write_postmortem** | 当 config.checkpoint.alert_after_postmortem_count 存在且 total >= 阈值时，append_event("postmortem_alert", { total, threshold })，供时间轴/告警消费。 |
+| **验收** | 单测 test_run_checkpoint_postmortem_alert_event；GET /events 可见 postmortem_alert 类型。 |
+
 ### Phase 3 再往后
 
 - **多 Limb 增强**：更多 limbs 注册、intent_tool_map 扩展。
-- **自动复盘扩展**：last_24h 等指标、告警事件写入 events。
+- **自动复盘扩展**：last_24h 等指标。
 - **商业闭环稳定**：可观测、可回放、可收敛。
