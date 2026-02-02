@@ -10,11 +10,14 @@ constitution:
   forbid: []   # 例如: ["delete_user_data"]
   allow: []
   restrict: []  # 例如: [{ action: "content", require_human: true }]
-  # 意图偏差分：enabled 且 score > threshold 则拦截；stub_score 仅测试用，后续可接 LLM
+  # 意图偏差分：enabled 且 score > threshold 则拦截；stub_score 仅测试用；provider=zhipu 时用智谱（需 env）
   intent_deviation:
     enabled: false
     threshold: 0.5
-    # stub_score: 0.0  # 测试时设为 1.0 可强制拦截
+    # stub_score: 0.0   # 测试时设为 1.0 可强制拦截
+    # provider: zhipu   # 启用智谱算分时填写；需环境变量 ZHIPUAI_API_KEY
+    # base_url: ""     # 可选，覆盖智谱 base_url（否则用 env ZHIPUAI_BASE_URL 或默认）
+    # model: glm-4-flash
 
 # World Checkpoint：偏差阈值与延时（秒）
 checkpoint:
@@ -32,3 +35,7 @@ limbs:
     require_approval: true
     priority: 5
     # checkpoint: "content_stub"  # 可选：启用 stub 校验器，params 可传 expectedWorldState，result 可含 mock_actual
+  ops:
+    endpoint: "http://localhost:8080/limb/ops"
+    require_approval: false
+    priority: 5

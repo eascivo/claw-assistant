@@ -92,3 +92,18 @@ def test_constitution_intent_deviation_disabled() -> None:
         "limbs": {"content": {}},
     }
     assert constitution_violation("content", {}, config) is False
+
+
+def test_constitution_intent_deviation_zhipu_no_key() -> None:
+    """意图偏差分：provider=zhipu 且未设置 ZHIPUAI_API_KEY 时返回 None，不拦截。"""
+    import os
+    os.environ.pop("ZHIPUAI_API_KEY", None)
+    config = {
+        "constitution": {
+            "forbid": [],
+            "restrict": [],
+            "intent_deviation": {"enabled": True, "threshold": 0.5, "provider": "zhipu"},
+        },
+        "limbs": {"content": {}},
+    }
+    assert constitution_violation("content", {"summary": "x"}, config) is False

@@ -30,7 +30,7 @@ def before_tool_call(
 def _intent_deviation_score(tool_name: str, params: dict[str, Any], config: dict[str, Any]) -> float | None:
     """
     意图偏差分（0~1）；未启用或无得分时返回 None。
-    当前支持 stub_score（测试用）；后续可接 LLM（constitution.intent_deviation.provider）。
+    支持 stub_score（测试用）、provider=zhipu（智谱，需环境变量 ZHIPUAI_API_KEY，base_url 可用 config 或 ZHIPUAI_BASE_URL）。
     """
     rules = get_constitution(config)
     dev = rules.get("intent_deviation") or {}
@@ -39,7 +39,9 @@ def _intent_deviation_score(tool_name: str, params: dict[str, Any], config: dict
     stub = dev.get("stub_score")
     if stub is not None:
         return float(stub)
-    # 后续：if dev.get("provider") == "openai": call LLM; return score
+    if dev.get("provider") == "zhipu":
+        from claw_assistant.governance.intent_deviation import intent_deviation_score_zhipu
+        return intent_deviation_score_zhipu(tool_name, params, config)
     return None
 
 

@@ -48,7 +48,7 @@ claw-assistant approve <approvalId>
 | `approve <id>` | 通过审批 |
 | `reject <id>` | 拒绝审批 |
 
-- **Constitution**：在 `config.yaml` 中配置 `constitution.forbid`（禁止执行的工具名）、`constitution.restrict`（必须走审批的工具）；可选 `constitution.intent_deviation.enabled` + `threshold` + `stub_score`（意图偏差分，当前 stub，后续可接 LLM）。
+- **Constitution**：在 `config.yaml` 中配置 `constitution.forbid`、`constitution.restrict`；可选意图偏差分 `constitution.intent_deviation.enabled` + `threshold`，`stub_score`（测试用）或 `provider: zhipu`（智谱）。智谱需环境变量：**`ZHIPUAI_API_KEY`**（必填）；**`ZHIPUAI_BASE_URL`**（可选，替换默认 `https://open.bigmodel.cn/api/paas/v4`）。config 中 `intent_deviation.base_url` 可覆盖 base_url。
 - **World Checkpoint**：配置 `checkpoint.threshold`、`delay_seconds`；limb 可配置 `checkpoint: "content_stub"`；偏差超阈值会写复盘，可通过 `GET /postmortems` 查看。
 - **Dashboard**：`cd dashboard && npm install && npm run dev`，浏览器打开 http://localhost:3000；需先启动 daemon（`claw-assistant serve`）。环境变量 `NEXT_PUBLIC_API_URL` 默认 `http://localhost:8080`。
 - **experimental 免审批**：默认 `channels.experimental.require_approval: false`，`run --channel experimental` 不挂起审批；设 `true` 则 experimental 也需审批。

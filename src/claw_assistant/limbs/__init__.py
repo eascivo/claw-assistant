@@ -1,9 +1,11 @@
-"""Limbs: 执行层，Content stub 等。"""
+"""Limbs: 执行层，Content / Ops stub 等。"""
 
 from claw_assistant.limbs.content import execute_content
+from claw_assistant.limbs.ops import execute_ops
 
 LIMB_REGISTRY: dict[str, callable] = {
     "content": execute_content,
+    "ops": execute_ops,
 }
 
 

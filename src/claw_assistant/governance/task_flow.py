@@ -20,16 +20,16 @@ async def run_task_flow(
     config: dict[str, Any] | None = None,
     session_key: str | None = None,
     channel: str = "main",
+    tool_name: str = "content",
 ) -> dict[str, Any]:
     """
     主任务流：生成任务 → Constitution 检查 → 若需审批则挂起并 wait → 幂等检查 → 执行 Limb → World Check 占位。
-    channel：main（生产）或 experimental（Brain-B 影子）；事件与结果带 channel 标记。
+    channel：main（生产）或 experimental（Brain-B 影子）；tool_name：路由到的 limb（如 content / ops）。
     返回 { "ok": True, "result": ... } 或 { "ok": False, "error": ... } 或 { "ok": False, "block_reason": ... }；
     若需审批则在内部 register 后 await wait，通过后再执行。
     """
     config = config or load_config()
     task_id = str(uuid.uuid4())
-    tool_name = "content"
     params: dict[str, Any] = {"summary": intent}
 
     block, block_reason, params = before_tool_call(tool_name, params, config)

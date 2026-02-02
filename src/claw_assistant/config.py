@@ -68,7 +68,10 @@ def get_constitution(config: dict[str, Any]) -> dict[str, Any]:
         "intent_deviation": {
             "enabled": dev.get("enabled", False),
             "threshold": float(dev.get("threshold", 0.5)),
-            "stub_score": dev.get("stub_score"),  # 测试用；未设则后续可接 LLM
+            "stub_score": dev.get("stub_score"),  # 测试用；未设则用 provider
+            "provider": dev.get("provider"),  # 如 zhipu
+            "base_url": dev.get("base_url"),  # 可选，覆盖 env ZHIPUAI_BASE_URL
+            "model": dev.get("model", "glm-4-flash"),
         },
     }
 

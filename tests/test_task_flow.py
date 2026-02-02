@@ -41,6 +41,26 @@ async def test_run_task_flow_no_approval(config_no_approval: dict) -> None:
 
 
 @pytest.mark.asyncio
+async def test_run_task_flow_tool_ops(config_no_approval: dict) -> None:
+    """多 Limb：tool_name=ops 时路由到 ops limb。"""
+    config = {**config_no_approval, "limbs": {"content": {"require_approval": False}, "ops": {"require_approval": False}}}
+    manager = ApprovalManager()
+    out = await run_task_flow("部署测试", manager, config=config, tool_name="ops")
+    assert out.get("ok") is True
+    assert out["result"].get("limb") == "ops"
+    assert out["result"].get("summary") == "部署测试"
+
+
+@pytest.mark.asyncio
+async def test_run_task_flow_unknown_limb(config_no_approval: dict) -> None:
+    """多 Limb：未知 tool_name 返回 error。"""
+    manager = ApprovalManager()
+    out = await run_task_flow("x", manager, config=config_no_approval, tool_name="unknown_limb")
+    assert out.get("ok") is False
+    assert "unknown limb" in out.get("error", "").lower()
+
+
+@pytest.mark.asyncio
 async def test_run_task_flow_channel_experimental(config_no_approval: dict) -> None:
     """Brain-B 影子：channel=experimental 时结果与事件带 channel 标记。"""
     from claw_assistant.governance.events import clear_events, get_events

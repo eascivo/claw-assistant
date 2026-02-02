@@ -25,12 +25,13 @@ def run(
     intent: str = typer.Argument(..., help="任务意图，如：发布一条测试"),
     base: str = typer.Option(DEFAULT_BASE, "--base", "-b", help="daemon 基地址"),
     channel: str = typer.Option("main", "--channel", "-c", help="main（生产）或 experimental（Brain-B 影子）"),
+    tool: str = typer.Option("content", "--tool", "-t", help="路由到的 limb：content | ops"),
 ) -> None:
     """向 daemon 发起一次任务流；若需审批会挂起直到 approve/reject。"""
     typer.echo("正在发起任务（如需人工审批将在此等待，请另开终端执行 status 与 approve <id>）…")
     with Client(base_url=base, timeout=300.0, trust_env=False) as client:
         try:
-            r = client.post("/run", json={"intent": intent, "channel": channel})
+            r = client.post("/run", json={"intent": intent, "channel": channel, "tool": tool})
             r.raise_for_status()
             data = r.json()
             if data.get("ok"):
