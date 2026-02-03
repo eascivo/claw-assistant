@@ -440,3 +440,30 @@ async def test_goals_api_patch_status(app) -> None:
     done_list = r2.json().get("goals", [])
     assert len(done_list) >= 1
     assert any(g.get("id") == goal_id and g.get("status") == "done" for g in done_list)
+
+
+@pytest.mark.asyncio
+async def test_goals_api_get_intents(app) -> None:
+    """GET /goals/:id/intents 返回该目标拆解出的 intent 列表（占位：单条=目标原文）。"""
+    from claw_assistant.goals import clear_goals
+
+    clear_goals()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
+        r = await client.post("/goals", json={"text": "本周发布三条内容"})
+        assert r.status_code == 200
+        goal_id = r.json()["id"]
+        r2 = await client.get(f"/goals/{goal_id}/intents")
+    assert r2.status_code == 200
+    data = r2.json()
+    assert "intents" in data
+    assert data["intents"] == ["本周发布三条内容"]
+
+
+@pytest.mark.asyncio
+async def test_goals_api_get_intents_404(app) -> None:
+    """GET /goals/:id/intents 对不存在的 goal 返回 404。"""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
+        r = await client.get("/goals/no-such-id/intents")
+    assert r.status_code == 404

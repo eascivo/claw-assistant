@@ -27,7 +27,13 @@ from claw_assistant.governance.events import (
     get_run_count_by_limb,
     get_run_count_by_channel,
 )
-from claw_assistant.goals import add_goal as goals_add_goal, list_goals as goals_list_goals, update_goal_status as goals_update_status
+from claw_assistant.goals import (
+    add_goal as goals_add_goal,
+    expand_goal_to_intents as goals_expand_to_intents,
+    get_goal as goals_get_goal,
+    list_goals as goals_list_goals,
+    update_goal_status as goals_update_status,
+)
 from claw_assistant.governance.hooks import before_tool_call as governance_before_tool_call
 from claw_assistant.governance.task_flow import run_task_flow
 from claw_assistant.im.notifier import get_notifier
@@ -186,6 +192,15 @@ def create_app(config: dict[str, Any] | None = None) -> FastAPI:
         if not ok:
             raise HTTPException(status_code=404, detail="goal not found")
         return {"ok": True}
+
+    @app.get("/goals/{goal_id}/intents")
+    async def api_goals_intents(goal_id: str) -> dict[str, Any]:
+        """将目标拆解为 intent 列表（占位：当前返回单条 = 目标原文）。供定时/手动调用后对每条 intent 调 POST /run。"""
+        goal = goals_get_goal(goal_id)
+        if not goal:
+            raise HTTPException(status_code=404, detail="goal not found")
+        intents = goals_expand_to_intents(goal.get("text", ""))
+        return {"intents": intents}
 
     class ApproveBody(BaseModel):
         approval_id: str

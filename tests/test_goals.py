@@ -1,10 +1,15 @@
-"""目标池（goals）单测：add_goal、list_goals、update_goal_status。"""
-
-import time
+"""目标池（goals）单测：add_goal、list_goals、update_goal_status、get_goal、expand_goal_to_intents。"""
 
 import pytest
 
-from claw_assistant.goals import add_goal, clear_goals, list_goals, update_goal_status
+from claw_assistant.goals import (
+    add_goal,
+    clear_goals,
+    expand_goal_to_intents,
+    get_goal,
+    list_goals,
+    update_goal_status,
+)
 
 
 def test_add_goal_returns_id_and_text() -> None:
@@ -62,3 +67,21 @@ def test_update_goal_status_unknown_id_returns_false() -> None:
     """不存在的 id 更新返回 False。"""
     clear_goals()
     assert update_goal_status("no-such-id", "done") is False
+
+
+def test_get_goal() -> None:
+    """get_goal 按 id 返回目标，不存在返回 None。"""
+    clear_goals()
+    g = add_goal("某目标")
+    found = get_goal(g["id"])
+    assert found is not None
+    assert found["text"] == "某目标"
+    assert get_goal("no-such-id") is None
+
+
+def test_expand_goal_to_intents_placeholder() -> None:
+    """拆解策略占位：目前返回单条 intent = 目标原文。"""
+    intents = expand_goal_to_intents("本周完成内容发布")
+    assert intents == ["本周完成内容发布"]
+    assert expand_goal_to_intents("  a  ") == ["a"]
+    assert expand_goal_to_intents("") == []
