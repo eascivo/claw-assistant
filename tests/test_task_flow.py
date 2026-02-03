@@ -199,3 +199,36 @@ async def test_run_task_flow_require_approval_then_reject(config_require_approva
     out = await run_task_flow("发布一条测试", manager, config=config_require_approval)
     assert out.get("ok") is False
     assert "rejected" in out.get("error", "").lower()
+
+
+@pytest.mark.asyncio
+async def test_run_task_flow_approval_only_critical_true_skips_non_critical(config_no_approval: dict) -> None:
+    """审批策略收紧：approval_only_critical=True 时仅 limb require_approval 的挂起，其余自动放行。"""
+    config = {**config_no_approval, "governance": {"approval_only_critical": True}}
+    manager = ApprovalManager()
+    out = await run_task_flow("发布一条测试", manager, config=config)
+    assert out.get("ok") is True
+    assert out["result"].get("limb") == "content"
+    assert len(await manager.list_pending()) == 0
+
+
+@pytest.mark.asyncio
+async def test_run_task_flow_approval_only_critical_false_requires_all(config_no_approval: dict) -> None:
+    """审批策略：approval_only_critical=False 时该 channel 下所有 limb 均挂起（更严格）。"""
+    config = {
+        **config_no_approval,
+        "governance": {"approval_only_critical": False},
+        "channels": {"main": {"require_approval": True}, "experimental": {"require_approval": False}},
+    }
+    manager = ApprovalManager()
+
+    async def approve_soon() -> None:
+        await asyncio.sleep(0.1)
+        pending = await manager.list_pending()
+        if pending:
+            await manager.resolve(pending[0]["approval_id"], "approve")
+
+    asyncio.create_task(approve_soon())
+    out = await run_task_flow("发布一条测试", manager, config=config, channel="main")
+    assert out.get("ok") is True
+    assert out["result"].get("limb") == "content"

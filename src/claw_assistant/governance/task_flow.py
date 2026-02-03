@@ -4,7 +4,7 @@ import logging
 import uuid
 from typing import Any
 
-from claw_assistant.config import get_channel_config, get_limb_config, load_config, resolve_tool_from_intent
+from claw_assistant.config import get_channel_config, get_governance_config, get_limb_config, load_config, resolve_tool_from_intent
 from claw_assistant.governance.approval import ApprovalManager
 from claw_assistant.im.notifier import get_notifier
 from claw_assistant.governance.checkpoint import schedule_checkpoint
@@ -44,10 +44,13 @@ async def run_task_flow(
 
     limb_cfg = get_limb_config(config, tool_name)
     channel_cfg = get_channel_config(config, channel)
-    need_approval = (
-        limb_cfg
-        and limb_cfg.get("require_approval")
-        and channel_cfg.get("require_approval", True if channel == "main" else False)
+    governance = get_governance_config(config)
+    channel_requires_approval = channel_cfg.get("require_approval", True if channel == "main" else False)
+    # approval_only_critical=True：仅 limb 配置了 require_approval 的挂起（战略「日常自动放行」）
+    # approval_only_critical=False：该 channel 下所有 limb 均挂起（更严格）
+    limb_is_critical = limb_cfg and limb_cfg.get("require_approval")
+    need_approval = channel_requires_approval and (
+        limb_is_critical if governance.get("approval_only_critical", True) else True
     )
     if need_approval:
         pending = await approval_manager.register(

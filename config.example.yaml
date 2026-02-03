@@ -36,6 +36,10 @@ checkpoint:
 #   feishu:
 #     webhook_url: "https://open.feishu.cn/open-apis/bot/v2/hook/xxx"  # 自定义机器人 Webhook（可选，当前 stub 仅 log）
 
+# 审批策略（与战略「日常自动放行」一致）：approval_only_critical=true 时仅 limb 配置了 require_approval 的挂起；false 时该 channel 下所有 limb 均挂起
+# governance:
+#   approval_only_critical: true   # 默认 true，仅关键 limb 挂起
+
 # channel：experimental 默认免审批（仅执行并记录），main 仍按 limb require_approval
 channels:
   experimental:

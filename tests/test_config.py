@@ -1,8 +1,24 @@
-"""config 模块单测：load_config、resolve_tool_from_intent 等。"""
+"""config 模块单测：load_config、resolve_tool_from_intent、get_governance_config 等。"""
 
 import pytest
 
-from claw_assistant.config import resolve_tool_from_intent
+from claw_assistant.config import get_governance_config, resolve_tool_from_intent
+
+
+def test_get_governance_config_default() -> None:
+    """无 governance 或无 approval_only_critical 时默认 True（仅关键 limb 挂起）。"""
+    assert get_governance_config({}) == {"approval_only_critical": True}
+    assert get_governance_config({"governance": {}}) == {"approval_only_critical": True}
+
+
+def test_get_governance_config_approval_only_critical() -> None:
+    """governance.approval_only_critical 可显式设为 False。"""
+    assert get_governance_config({"governance": {"approval_only_critical": False}}) == {
+        "approval_only_critical": False
+    }
+    assert get_governance_config({"governance": {"approval_only_critical": True}}) == {
+        "approval_only_critical": True
+    }
 
 
 def test_resolve_tool_from_intent_empty_map_returns_default() -> None:

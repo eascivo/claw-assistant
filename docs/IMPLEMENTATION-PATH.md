@@ -1,6 +1,6 @@
 # claw-assistant MVP 实现路径
 
-**与 [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) Phase 1 对齐的拆分与目录结构。**
+**与 [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) 战略蓝图对齐**。设计目标 = 目标驱动、A 自主、B 研发上线、人类审批集中在关键节点（B→A 能力上线 + 极少数关键动作）；当前 MVP = **可运行最小形态**（单次 Intent + 工具调用级审批、channel main/experimental 影子），后续迭代向战略收敛。目录与阶段拆分见下。
 
 ---
 
@@ -103,7 +103,7 @@ claw-assistant/
 | 内容 | 说明 |
 |------|------|
 | **Dashboard 时间轴** | 事件存储（审批 requested/resolved、limb 执行、postmortem）→ FastAPI 读事件 API → **Next.js + Tailwind** 前端：待审批、任务列表、24h 决策回放时间轴、postmortems。先有态势看板再接 Brain-B 更清晰。 |
-| **Brain-B 影子测试** | 双 agent（main / experimental）；实验渠道任务先走 Brain-B，通过后再进 Brain-A 生产；依赖双 agent bindings 与任务路由。 |
+| **Brain-B 影子测试** | 双 channel（main / experimental）；experimental 任务走影子执行、可免审批，与 main 共用 limbs；**注意**：当前为「影子/分渠道」，非战略「B 研发→上线给 A」；收敛时需 B→A 能力上线流程（见 Phase 4）。 |
 | **Constitution 可选增强** | 可选 LLM 意图偏差分（deviationScore > threshold 则拦截）。 |
 
 **依赖**：事件存储（内存 / Redis / SQLite 记录 approval、执行、postmortem）；Dashboard 后端读事件并暴露 API；前端连后端展示时间轴。
@@ -128,7 +128,8 @@ claw-assistant/
 |------|------|
 | **channel 参数** | `run_task_flow(..., channel="main"|"experimental")`；POST /run 支持 `channel`，CLI `run --channel experimental`。 |
 | **事件与结果** | limb_executed 事件 payload 含 `channel`；返回 result 含 `channel`，便于 Dashboard/时间轴区分生产与影子。 |
-| **审批** | main 与 experimental 共用同一审批流（require_approval 由 config 决定）；后续可配置 experimental 免审批仅记录。 |
+| **审批** | main 与 experimental 共用同一审批流（require_approval 由 config 决定）；experimental 可配置免审批仅记录。 |
+| **与战略关系** | 当前为**影子/分渠道**（双轨执行），非「B 能力研发→经人批上线给 A」；向战略收敛需 Phase 4「B→A 上线流程」（能力晋升 API + main 仅用已晋升 limb）。 |
 
 - **验收**：`claw-assistant run --channel experimental "影子测试"`（或 approve 后）返回 `channel: experimental`；GET /events 中 limb_executed 含 `channel`。
 
@@ -347,6 +348,22 @@ claw-assistant/
 | **可收敛建议区块** | Dashboard 增加「可收敛建议」区块：与待审批/时间轴/复盘同一轮询，请求 GET /convergence/suggestions，展示 suggestions 列表（id、text、source）。 |
 | **验收** | npm run build 通过；与复盘同频刷新，无建议时显示「暂无建议」。 |
 
+### 已迭代：Dashboard 可选项（区块显示/隐藏）
+
+| 内容 | 说明 |
+|------|------|
+| **显示勾选** | 页面顶部增加「显示：待审批 时间轴 复盘 可收敛建议」四个复选框；勾选则展示对应区块，取消则隐藏。 |
+| **持久化** | 使用 localStorage（key: `claw-dashboard-sections`）保存勾选状态，刷新后保持。 |
+| **验收** | npm run build 通过；勾选/取消后对应区块显示/隐藏，刷新后状态保持。 |
+
+### 已迭代：审批策略收紧（Phase 4 方向 B）
+
+| 内容 | 说明 |
+|------|------|
+| **governance.approval_only_critical** | 默认 `true`：仅 limb 配置了 `require_approval: true` 的挂起（战略「日常自动放行」）；`false` 时该 channel 下所有 limb 均挂起（更严格）。 |
+| **get_governance_config(config)** | `config.py` 中实现；task_flow 据此决定 need_approval：channel 需审批且（仅关键 limb 时看 limb 配置，否则一律挂起）。 |
+| **验收** | 单测 test_get_governance_config_*、test_run_task_flow_approval_only_critical_*；config.example 注释示例。 |
+
 ### Phase 3 再往后
 
 - **多 Limb 增强**：当前阶段已收尾（content / ops / notify 注册、intent_tool_map、扩展文档齐全）；后续按 [README 扩展：新增 Limb](README.md) 即可增加新 limb 与 intent_tool_map。
@@ -365,49 +382,70 @@ claw-assistant/
 |------|----------|----------|--------|
 | **Phase 1** | 单 Brain-A；单 Limb（Content）；Proxy + 人工审批；World Checkpoint（占位） | 全部完成；且 Constitution、Checkpoint 校验器与复盘已实现 | **100%** |
 | **Phase 2** | Brain-B 影子测试；Constitution v1；Dashboard 时间轴 | channel main/experimental、experimental 免审批、Constitution forbid/restrict + 意图偏差（智谱）、事件存储 + GET /events、Dashboard 待审批+时间轴+复盘 | **100%** |
-| **Phase 3** | 多 Limb；自动复盘；商业闭环稳定 | 多 Limb、复盘持久化+告警、health/metrics、回放 UI、可收敛小步、**GET /metrics 按 limb/channel 扩展**；告警渠道（Webhook）待后续 | **约 95%** |
+| **Phase 3** | 多 Limb；自动复盘；商业闭环稳定 | 多 Limb、复盘持久化+告警、health/metrics、回放 UI、可收敛小步、GET /metrics 按 limb/channel、**告警渠道（Webhook）** 已完成 | **100%** |
 
-**整体 MVP（不含 OpenClaw）完成度：约 98%。**
+**整体 MVP（不含 OpenClaw）完成度：100%。**
 
 ### 与全量战略蓝图的偏差
 
-| 维度 | 蓝图目标 | 当前实现 | 偏差说明 |
-|------|----------|----------|----------|
-| **Control 双脑** | OpenClaw Brain-A/B 多 agent，意图/任务由 agent 模型+workspace 产出 | 意图→单任务简单映射，无 OpenClaw；channel 仅区分 main/experimental 路由与审批策略 | **刻意脱耦**：MVP 不依赖 OpenClaw，便于本地闭环验证 |
+**设计目标**以 [SYSTEM-DESIGN.md 战略蓝图](SYSTEM-DESIGN.md#战略蓝图设计目标) 为准：入口少干预、目标驱动、A 自主执行、B 研发能力后「上线」给 A、人类审批集中在 B→A 上线与少数高风险动作。当前实现采用「单次 Intent + 工具调用级审批」为可运行最小形态，后续迭代向战略蓝图收敛。
+
+| 维度 | 蓝图目标（战略蓝图） | 当前实现 | 偏差说明 |
+|------|----------------------|----------|----------|
+| **Control 双脑** | 目标驱动、A 主脑自主规划；B 能力研发→上线给 A | 意图→单任务简单映射，无 OpenClaw；channel main/experimental 为**影子/分渠道**，非「B 研发→上线给 A」 | **刻意脱耦**：MVP 不依赖 OpenClaw；收敛时需目标入口 + B→A 上线流程 |
 | **Commander** | IM Bot + Dashboard，经 OpenClaw Gateway WS/RPC（health、exec.approval、sessions） | 仅 Dashboard（Next.js）+ FastAPI HTTP API；无 IM Bot、无 Gateway WS | **未做**：IM Bot、Gateway 对接 |
-| **Governance** | OpenClaw Plugin（before/after_tool_call、exec 审批） | 独立 FastAPI + 内存 ApprovalManager + hooks；逻辑与蓝图一致，未寄生 OpenClaw | **形态不同**：能力对齐，部署形态独立 |
+| **Governance** | 审批仅关键节点（B→A 上线 + 极少数关键动作）；日常自动放行 | 独立 FastAPI + 内存 ApprovalManager；当前按 **limb require_approval** 挂起（工具调用级），非「仅关键节点」 | **策略未收敛**：能力对齐，审批策略收敛见 Phase 4 |
 | **Data / Limbs** | OpenClaw tools + Node/隧道，Limb 经 Gateway 调度 | 多 Limb 为进程内 stub，经 task_flow 直接调用；无 OpenClaw 工具注册与隧道 | **未做**：OpenClaw 工具注册与本地 Limb 隧道 |
 | **可回放** | Dashboard 从 session transcript + 审批事件做时间轴 | 事件存储 + GET /events（含 task_id 过滤）；Dashboard 时间轴 + 按 task_id 下拉筛选单任务回放 | **已补齐**：回放 API 与回放 UI 均已就绪 |
 | **可收敛** | 复盘回写、收益指标、告警后形成闭环 | 复盘持久化、summary、告警事件已做；**可收敛最小形态**：文档定义 + GET /convergence/suggestions 占位（复盘 ≥ 阈值时返回建议）；自动写回 config 未做 | **小步已做**：文档 + 占位 API；扩展为自动调参/写回 config 待后续 |
 
 ### 完成度小结
 
-- **相对 MVP 路径（IMPLEMENTATION-PATH 约定）**：Phase 1/2 已收尾，Phase 3 收尾完成（回放 UI、可收敛小步、监控扩展），**整体约 98%**。剩余：可收敛扩展（写回 config/自动调参）等可选扩展；**告警渠道（Webhook）暂不列入近期**。
-- **相对全量 SYSTEM-DESIGN**：核心治理与任务流、Dashboard 与可观测已对齐；**未覆盖**：OpenClaw 接入、IM Bot、Gateway WS/RPC、Limb 经 OpenClaw 调度与隧道。若按「全量蓝图」计，完成度约 **55%**（治理+数据流+Dashboard 为主，Control/Commander/Data 形态未接 OpenClaw）。
+- **相对 MVP 路径（IMPLEMENTATION-PATH 约定）**：Phase 1/2/3 已收尾（含回放 UI、可收敛小步、监控扩展、告警渠道 Webhook），**整体 100%**。剩余：可收敛扩展（写回 config/自动调参）等可选；**下一阶段** = 向战略蓝图收敛（见下节）。
+- **相对全量 SYSTEM-DESIGN（战略蓝图）**：核心治理与任务流、Dashboard 与可观测已对齐；**未覆盖**：目标入口、B→A 能力上线流程、审批仅关键节点、OpenClaw 接入、IM Bot、Gateway WS/RPC、Limb 经 OpenClaw 调度。若按「全量蓝图」计，完成度约 **55%**（治理+数据流+Dashboard 为主，Control/Commander/Data 形态与审批策略未收敛）。
 
 ---
 
-## 下一阶段 Roadmap（Phase 3 收尾 → Phase 4 选项）
+## 下一阶段 Roadmap（Phase 4：向战略蓝图收敛）
 
-### 近期（Phase 3 收尾，约 1–2 周）
+**设计依据**：[SYSTEM-DESIGN.md 战略蓝图](SYSTEM-DESIGN.md#战略蓝图设计目标) — 入口以目标为主、A 自主规划、B 能力研发→上线给 A、人类审批集中在关键节点（B→A 能力上线 + 极少数关键动作）；日常由宪法/策略自动放行，减少打扰。
 
-| 优先级 | 项 | 说明 | 验收 |
-|--------|----|------|------|
-| ~~P1~~ | **回放 UI**（已完成） | Dashboard 支持按 task 查看：调用 GET /events?task_id=xxx，单任务时间轴下拉筛选 | 前端可选中某 task_id，仅展示该任务事件；见「已迭代：回放 UI」 |
-| ~~P2~~ | **可收敛小步**（已完成） | 定义「收敛」最小形态（输入/输出/流程）；GET /convergence/suggestions 占位 API；复盘 ≥ 阈值时返回一条建议 | 文档定义 + 占位 API；见「已迭代：可收敛小步」 |
-| ~~P3~~ | **监控扩展**（已完成） | GET /metrics 增加 run_count_by_limb、run_count_by_channel | 单测/集成测；见「已迭代：GET /metrics 监控扩展」 |
-| ~~P4~~ | **告警渠道（Webhook）**（已完成） | checkpoint.alert_webhook_url；复盘 ≥ 阈值时 POST JSON（event/postmortem_alert, total, threshold） | 配置项 + 单测/集成测；见「已迭代：告警渠道 Webhook」 |
+### Phase 3 收尾状态（已完成）
 
-### 中期（Phase 4 方向选择，二选一或并行）
+| 项 | 状态 |
+|----|------|
+| 回放 UI（GET /events?task_id=xxx + Dashboard 按 task 下钻） | ✅ 已完成 |
+| 可收敛小步（GET /convergence/suggestions 占位） | ✅ 已完成 |
+| GET /metrics 按 limb/channel 扩展 | ✅ 已完成 |
+| 告警渠道（checkpoint.alert_webhook_url） | ✅ 已完成 |
 
-| 方向 | 内容 | 依赖 |
-|------|------|------|
-| **A. 接 OpenClaw** | 将 Control 改为 OpenClaw 双 agent；Governance 改为 Plugin（before/after_tool_call）；审批对接 exec.approval；Dashboard/Commander 经 Gateway WS/RPC | OpenClaw 可用环境、Gateway 协议稳定 |
-| **B. 深化闭环（仍不接 OpenClaw）** | IM Bot **飞书先行**，钉钉/Discord 等预留接口；对接当前 FastAPI 审批 API；复盘→策略建议或自动调参；Limb 实装（如 Content 接真实发布 API） | 飞书集成测试所需见 [FEISHU-INTEGRATION.md](FEISHU-INTEGRATION.md) |
+### Phase 4 方向 A：接 OpenClaw（全量对齐战略）
+
+| 内容 | 说明 | 验收/依赖 |
+|------|------|-----------|
+| **Control** | OpenClaw 双 agent（A 主脑、B 能力研发）；**目标入口**（目标池/Goal Agent，人类偶发设定）；A 仅使用已上线 tools/skills，缺能力时派单 B | OpenClaw 可用环境、Gateway 协议稳定 |
+| **B→A 上线流程** | B 发起「能力晋升」→ Commander 审批 → 写入 A 的 workspace/tools；RPC 如 `claw.capability.promote.request/resolve` | Plugin 或独立服务实现；Dashboard 能力上线队列 |
+| **Governance** | 改为 OpenClaw Plugin（before/after_tool_call）；**审批仅关键节点**：① 能力上线（B→A）必须人批 ② 极少数关键动作（如 publish）挂起，其余宪法/策略自动放行 | exec.approval.* + capability.promote |
+| **Commander** | IM Bot + Dashboard 经 Gateway WS/RPC；目标设定、B→A 审批、关键动作审批、态势 | 见 [FEISHU-INTEGRATION.md](FEISHU-INTEGRATION.md)（接 OpenClaw 后 Commander 统一经 Gateway） |
+| **Data** | Limb 经 OpenClaw 调度（tools + Node/隧道） | 工具注册与隧道 |
+
+### Phase 4 方向 B：不接 OpenClaw，向战略收敛（小步）
+
+| 内容 | 说明 | 验收/依赖 |
+|------|------|-----------|
+| **审批策略收紧** | 见「已迭代：审批策略收紧」：`governance.approval_only_critical` 配置项 + 文档已补齐。 | ✅ 已完成 |
+| **目标入口小步** | 可选「目标池」：配置或 API 写入目标列表；定时/手动将目标拆解为多条 intent 调用现有 `POST /run`（不接 OpenClaw 时的最小形态）。 | 目标存储 + 拆解策略（规则或占位）；Dashboard 可展示目标列表 |
+| **B→A 上线小步** | 在现有 channel 基础上，增加「能力晋升」：experimental 验证通过的 tool 经人批（API 或 Dashboard）后加入「main 可用 tool 列表」（config 或内存）；main channel 仅能调用已晋升的 limbs。当前 main/experimental 共用 intent_tool_map，可先做「main 仅允许已晋升 limb」的配置/白名单。 | 晋升 API（如 POST /capabilities/promote）；config 或 store 维护 main_limbs 白名单；Dashboard 能力上线队列（待审批晋升列表） |
+| **IM Bot（飞书）** | 审批通知已做（Webhook）；**解析用户审批指令**（事件订阅）→ 调 FastAPI approve/reject，见 [FEISHU-INTEGRATION.md](FEISHU-INTEGRATION.md)。接 OpenClaw 后改为经 Gateway。 | 飞书事件订阅 URL 校验 + 消息解析 |
+| **可收敛扩展** | 复盘建议写回 config、自动调参等可选 | 见「可收敛小步」后续 |
 
 ### 下一步规划（当前）
 
-- **Phase 3 收尾已完成**：回放 UI、可收敛小步、监控扩展、告警渠道 Webhook 均已完成。
-- **IM 预留接口已完成**：IMNotifier、get_notifier、FeishuNotifier；审批挂起时可选调用 send_approval_request。**飞书实装小步已完成**：配置 im.feishu.webhook_url 时 POST 审批通知到飞书群；解析用户审批指令（事件订阅）待做，见 [FEISHU-INTEGRATION.md](FEISHU-INTEGRATION.md)。
-- **OpenClaw**：仍在准备中，暂不列入近期必做；准备就绪后再按 Roadmap 方向 A 排期。
-- **之后可选**：可收敛扩展（写回 config/自动调参）等；Dashboard 已展示 GET /convergence/suggestions。
+- **Phase 3**：已全部完成，无待办。**告警**：告警渠道（Webhook）已完成，不再列入近期必做；后续告警扩展为可选。
+- **OpenClaw / IM Bot**：仍在**准备中**，暂不列入近期必做；准备就绪后再按方向 A 或飞书事件订阅排期。**OpenClaw 集成方案**（角色分工、claw-assistant 改为 Plugin、实施顺序、依赖与风险）见 [docs/OPENCLAW-INTEGRATION.md](OPENCLAW-INTEGRATION.md)。
+- **IM 选型**：**飞书先行**；钉钉、Discord 等为可选适配，代码侧已预留接口（IMNotifier、get_notifier），待做时按同一接口实现。
+- **飞书集成测试**：调研飞书需提供哪些东西来做集成测试见 [FEISHU-INTEGRATION.md](FEISHU-INTEGRATION.md)（含「集成测试所需清单」）；后端待实现：POST /feishu/events（URL 校验 + 消息解析 → approve/reject）。
+- **Phase 4 可做项（不接 OpenClaw 先收敛）**：① 审批策略收紧（文档 + governance.approval_only_critical）**已完成**；② B→A 上线小步（晋升 API + main 白名单） ③ 目标入口小步（目标池 + 拆解） ④ 飞书解析用户审批指令（事件订阅）。
+- **Dashboard 可选项**：convergence（可收敛建议）、复盘、时间轴等区块可配置显示/隐藏，见「已迭代：Dashboard 可选项」。
+- **多环境协作**：本机小步开发、家里/云服务器飞书联调见 [docs/DEV-WORKFLOW.md](DEV-WORKFLOW.md)。
+- **可选**：可收敛扩展（写回 config/自动调参）；Limb 实装（Content 接真实发布 API）。

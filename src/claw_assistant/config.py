@@ -46,7 +46,14 @@ def _default_config() -> dict[str, Any]:
         },
         "checkpoint": {"threshold": 0.5, "delay_seconds": 0},
         "channels": {"experimental": {"require_approval": False}},
+        "governance": {"approval_only_critical": True},
     }
+
+
+def get_governance_config(config: dict[str, Any]) -> dict[str, Any]:
+    """返回 governance 配置。approval_only_critical=True 时仅 limb 配置了 require_approval 的挂起（战略「日常自动放行」）。"""
+    gov = config.get("governance") or {}
+    return {"approval_only_critical": gov.get("approval_only_critical", True)}
 
 
 def get_channel_config(config: dict[str, Any], channel_name: str) -> dict[str, Any]:
