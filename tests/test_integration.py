@@ -304,3 +304,139 @@ async def test_get_postmortems_summary_alert_when_over_threshold() -> None:
     assert "alert_threshold" in data["summary"]
     assert data["summary"]["alert_threshold"] == 0
     assert data["summary"]["alert"] is True
+
+
+# ---------- OpenClaw 治理桥（Phase 4）----------
+@pytest.mark.asyncio
+async def test_governance_before_tool_call_allow(app) -> None:
+    """POST /governance/before_tool_call 对不需审批的 limb（ops）直接放行。"""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
+        r = await client.post(
+            "/governance/before_tool_call",
+            json={"toolName": "ops", "params": {"summary": "部署"}, "agentId": "main"},
+        )
+    assert r.status_code == 200
+    data = r.json()
+    assert data.get("block") is False
+    assert "params" in data
+
+
+@pytest.mark.asyncio
+async def test_governance_before_tool_call_constitution_block() -> None:
+    """宪法 forbid 该工具时 before_tool_call 返回 block true。"""
+    from claw_assistant.server.app import create_app
+
+    from tests.conftest import TEST_CONFIG
+
+    config = {**TEST_CONFIG.copy(), "constitution": {"forbid": ["content"], "allow": [], "restrict": [], "intent_deviation": {"enabled": False}}}
+    app = create_app(config=config)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
+        r = await client.post(
+            "/governance/before_tool_call",
+            json={"toolName": "content", "params": {"summary": "发布"}, "agentId": "main"},
+        )
+    assert r.status_code == 200
+    data = r.json()
+    assert data.get("block") is True
+    assert "constitution" in (data.get("blockReason") or "").lower()
+
+
+@pytest.mark.asyncio
+async def test_governance_before_tool_call_content_approve_flow(app) -> None:
+    """POST /governance/before_tool_call 对 content（需审批）挂起 → approve 解挂 → 返回放行。"""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=30.0) as client:
+        loop = asyncio.get_running_loop()
+        before_future = loop.create_future()
+
+        async def do_before() -> None:
+            r = await client.post(
+                "/governance/before_tool_call",
+                json={"toolName": "content", "params": {"summary": "发布测试"}, "agentId": "main"},
+            )
+            before_future.set_result(r)
+
+        asyncio.create_task(do_before())
+        await asyncio.sleep(0.2)
+        r_status = await client.get("/status")
+        assert r_status.status_code == 200
+        pending = r_status.json().get("pending", [])
+        assert len(pending) >= 1
+        approval_id = pending[0]["approval_id"]
+        r_approve = await client.post("/approve", json={"approval_id": approval_id})
+        assert r_approve.status_code == 200
+        r_before = await asyncio.wait_for(before_future, timeout=5.0)
+        assert r_before.status_code == 200
+        body = r_before.json()
+        assert body.get("block") is False
+        assert "params" in body
+
+
+@pytest.mark.asyncio
+async def test_governance_after_tool_call(app) -> None:
+    """POST /governance/after_tool_call 写 limb_executed 事件并调度 checkpoint。"""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
+        r = await client.post(
+            "/governance/after_tool_call",
+            json={
+                "toolName": "ops",
+                "params": {"summary": "部署"},
+                "result": {"ok": True},
+                "agentId": "main",
+                "toolCallId": "call-123",
+            },
+        )
+        assert r.status_code == 200
+        r_events = await client.get("/events", params={"limit": 20})
+    assert r_events.status_code == 200
+    events = r_events.json().get("events", [])
+    limb_evts = [e for e in events if e.get("type") == "limb_executed" and e.get("payload", {}).get("task_id") == "call-123"]
+    assert len(limb_evts) >= 1
+    assert limb_evts[0]["payload"].get("source") == "openclaw"
+    assert limb_evts[0]["payload"].get("tool_name") == "ops"
+
+
+# ---------- 目标池（Phase 4 方向 B：目标入口小步）----------
+@pytest.mark.asyncio
+async def test_goals_api_post_and_list(app) -> None:
+    """POST /goals 新增目标，GET /goals 返回列表（含新项）。"""
+    from claw_assistant.goals import clear_goals
+
+    clear_goals()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
+        r = await client.post("/goals", json={"text": "本周完成内容发布"})
+    assert r.status_code == 200
+    data = r.json()
+    assert data.get("text") == "本周完成内容发布"
+    assert data.get("status") == "pending"
+    assert "id" in data
+    assert "created_at" in data
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
+        r2 = await client.get("/goals")
+    assert r2.status_code == 200
+    goals = r2.json().get("goals", [])
+    assert any(g.get("text") == "本周完成内容发布" for g in goals)
+
+
+@pytest.mark.asyncio
+async def test_goals_api_patch_status(app) -> None:
+    """PATCH /goals/:id 更新状态，GET /goals?status=done 可过滤。"""
+    from claw_assistant.goals import clear_goals
+
+    clear_goals()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
+        r = await client.post("/goals", json={"text": "目标A"})
+        assert r.status_code == 200
+        goal_id = r.json()["id"]
+        rp = await client.patch(f"/goals/{goal_id}", json={"status": "done"})
+        assert rp.status_code == 200
+        r2 = await client.get("/goals", params={"status": "done"})
+    assert r2.status_code == 200
+    done_list = r2.json().get("goals", [])
+    assert len(done_list) >= 1
+    assert any(g.get("id") == goal_id and g.get("status") == "done" for g in done_list)

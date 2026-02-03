@@ -7,18 +7,30 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from claw_assistant.config import load_config, resolve_tool_from_intent
+from claw_assistant.config import (
+    get_channel_config,
+    get_governance_config,
+    get_limb_config,
+    get_channel_from_agent_id,
+    load_config,
+    resolve_limb_from_openclaw_tool,
+    resolve_tool_from_intent,
+)
 from claw_assistant.governance.approval import ApprovalManager
-from claw_assistant.governance.checkpoint import get_postmortems, load_postmortems_from_file_into_memory
+from claw_assistant.governance.checkpoint import get_postmortems, load_postmortems_from_file_into_memory, schedule_checkpoint
 from claw_assistant.governance.convergence import get_convergence_suggestions
 from claw_assistant.governance.events import (
+    append_event,
     get_events,
     get_events_count,
     get_run_count,
     get_run_count_by_limb,
     get_run_count_by_channel,
 )
+from claw_assistant.goals import add_goal as goals_add_goal, list_goals as goals_list_goals, update_goal_status as goals_update_status
+from claw_assistant.governance.hooks import before_tool_call as governance_before_tool_call
 from claw_assistant.governance.task_flow import run_task_flow
+from claw_assistant.im.notifier import get_notifier
 
 
 def create_app(config: dict[str, Any] | None = None) -> FastAPI:
@@ -148,6 +160,33 @@ def create_app(config: dict[str, Any] | None = None) -> FastAPI:
         suggestions = get_convergence_suggestions(postmortems, run_config)
         return {"suggestions": suggestions}
 
+    # ---------- 目标池（Phase 4 方向 B：目标入口小步）----------
+    class GoalBody(BaseModel):
+        text: str
+
+    @app.post("/goals")
+    async def api_goals_post(body: GoalBody) -> dict[str, Any]:
+        """新增一条目标；返回 { id, text, status, created_at }。"""
+        g = goals_add_goal(body.text)
+        return g
+
+    @app.get("/goals")
+    async def api_goals_list(status: str | None = None) -> dict[str, Any]:
+        """目标列表；可选 status 过滤（pending / done / cancelled）。按创建时间倒序。"""
+        goals = goals_list_goals(status=status)
+        return {"goals": goals}
+
+    class GoalStatusBody(BaseModel):
+        status: str  # done | cancelled
+
+    @app.patch("/goals/{goal_id}")
+    async def api_goals_patch(goal_id: str, body: GoalStatusBody) -> dict[str, Any]:
+        """更新目标状态（done / cancelled）。"""
+        ok = goals_update_status(goal_id, body.status)
+        if not ok:
+            raise HTTPException(status_code=404, detail="goal not found")
+        return {"ok": True}
+
     class ApproveBody(BaseModel):
         approval_id: str
 
@@ -168,6 +207,97 @@ def create_app(config: dict[str, Any] | None = None) -> FastAPI:
         if not ok:
             raise HTTPException(status_code=404, detail="approval not found")
         return {"ok": True, "decision": "reject"}
+
+    # ---------- OpenClaw 治理桥（Phase 4 最小形态）----------
+    class GovernanceBeforeToolCallBody(BaseModel):
+        toolName: str
+        params: dict[str, Any] = {}
+        sessionKey: str | None = None
+        agentId: str | None = None
+        toolCallId: str | None = None
+
+    class GovernanceAfterToolCallBody(BaseModel):
+        toolName: str
+        params: dict[str, Any] = {}
+        result: dict[str, Any] | None = None
+        error: str | None = None
+        durationMs: float | None = None
+        sessionKey: str | None = None
+        agentId: str | None = None
+        toolCallId: str | None = None
+
+    @app.post("/governance/before_tool_call")
+    async def api_governance_before_tool_call(body: GovernanceBeforeToolCallBody) -> dict[str, Any]:
+        """
+        OpenClaw Plugin 调用：宪法检查；若该 limb 需审批则挂起直到 approve/reject，再返回。
+        返回 { block: bool, blockReason?: string, params?: object }。
+        """
+        import uuid
+
+        run_config = getattr(app.state, "config", None) or load_config()
+        manager: ApprovalManager = app.state.approval_manager
+        limb_name = resolve_limb_from_openclaw_tool(body.toolName, run_config)
+        channel = get_channel_from_agent_id(body.agentId, run_config)
+        params = dict(body.params) if body.params else {}
+        if "summary" not in params and body.params:
+            params.setdefault("summary", str(body.params)[:200])
+
+        block, block_reason, modified_params = governance_before_tool_call(limb_name, params, run_config)
+        if block:
+            return {"block": True, "blockReason": block_reason or "constitution"}
+
+        limb_cfg = get_limb_config(run_config, limb_name)
+        channel_cfg = get_channel_config(run_config, channel)
+        governance = get_governance_config(run_config)
+        channel_requires_approval = channel_cfg.get("require_approval", channel == "main")
+        limb_is_critical = limb_cfg and limb_cfg.get("require_approval")
+        need_approval = channel_requires_approval and (
+            limb_is_critical if governance.get("approval_only_critical", True) else True
+        )
+        if need_approval:
+            task_id = str(uuid.uuid4())
+            pending = await manager.register(
+                session_key=body.sessionKey,
+                tool_name=limb_name,
+                params=modified_params,
+                task_id=task_id,
+                risk=limb_cfg.get("risk") if limb_cfg else None,
+            )
+            get_notifier(run_config).send_approval_request(**pending.to_public())
+            decision = await manager.wait(pending.approval_id)
+            if decision == "reject":
+                return {"block": True, "blockReason": "rejected by human"}
+
+        return {"block": False, "params": modified_params}
+
+    @app.post("/governance/after_tool_call")
+    async def api_governance_after_tool_call(body: GovernanceAfterToolCallBody) -> dict[str, Any]:
+        """
+        OpenClaw Plugin 调用：写 limb_executed 事件、调度 World Checkpoint；不阻塞。
+        """
+        import uuid
+
+        run_config = getattr(app.state, "config", None) or load_config()
+        limb_name = resolve_limb_from_openclaw_tool(body.toolName, run_config)
+        channel = get_channel_from_agent_id(body.agentId, run_config)
+        task_id = (body.toolCallId or "").strip() or str(uuid.uuid4())
+        result = body.result if body.result is not None else {}
+        if body.error:
+            result = {**result, "ok": False, "error": body.error}
+
+        append_event(
+            "limb_executed",
+            {
+                "task_id": task_id,
+                "tool_name": limb_name,
+                "summary": (body.params or {}).get("summary", ""),
+                "ok": result.get("ok"),
+                "channel": channel,
+                "source": "openclaw",
+            },
+        )
+        schedule_checkpoint(limb_name, body.params or {}, result, task_id, run_config)
+        return {}
 
     # Content Limb stub：由 daemon 自身提供，供 task_flow 内 in-process 调用，不暴露为 HTTP 也可；若需统一走 HTTP 可再加路由
     @app.get("/limb/content")

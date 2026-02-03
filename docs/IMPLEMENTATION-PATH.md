@@ -419,6 +419,28 @@ claw-assistant/
 | GET /metrics 按 limb/channel 扩展 | ✅ 已完成 |
 | 告警渠道（checkpoint.alert_webhook_url） | ✅ 已完成 |
 
+### Phase 4 OpenClaw 接入（最小形态）— 当前优先
+
+**设计依据**：[OPENCLAW-INTEGRATION.md 当前架构对接设计](OPENCLAW-INTEGRATION.md#当前-openclaw-架构对接设计202621最快速接入)（Gateway 18789、main + 7 brain-*、Telegram→main、Node Mac）。用 HTTP 治理桥最快接进去，不改 OpenClaw 拓扑。
+
+| 步骤 | 内容 | 验收 |
+|------|------|------|
+| **1** | **FastAPI 治理端点**：`POST /governance/before_tool_call`（入参 toolName、params、sessionKey、agentId、toolCallId；宪法检查；需审批则 register→wait→返回；返回 block/blockReason/params）、`POST /governance/after_tool_call`（入参 toolName、params、result、toolCallId 等；写事件、schedule_checkpoint） | 单测 + 集成测：before 放行/拦截/挂起→approve→放行；after 写事件与复盘 |
+| **2** | **agentId→channel**：agentId===main→main，否则 experimental；config 可选 `openclaw_agent_to_channel` 覆盖 | 同上 |
+| **3** | **OpenClaw Plugin（TS）**：本仓库提供 `openclaw-plugin/`（或同名），before_tool_call 请求 CLAW_ASSISTANT_URL/governance/before_tool_call 并返回 block/params；after_tool_call 请求 after_tool_call（fire-and-forget） | 在 OpenClaw 中加载插件，main 调用任意工具时触发治理；审批仍用我们 POST /approve |
+| **4** | **配置**：config 或环境变量 `CLAW_ASSISTANT_URL`（Plugin 用）；可选 `openclaw_tool_to_limb` 映射 OpenClaw 工具名→我们 limb 名 | 文档与 config.example 注释 |
+
+完成后：main 上所有工具调用经我们宪法+审批+复盘；Limb 仍由 OpenClaw 执行（现有 Node/tools）；审批解挂用现有 Dashboard/CLI。后续再做：Gateway exec.approval.resolve 替代 POST /approve、main 上注册我们 Limb 为 HTTP Tool。
+
+### 已迭代：Phase 4 OpenClaw 治理桥（最小形态）
+
+| 内容 | 说明 |
+|------|------|
+| **治理端点** | `POST /governance/before_tool_call`、`POST /governance/after_tool_call`；before 含宪法、审批挂起（register→wait）、返回 block/blockReason/params；after 写 limb_executed（source=openclaw）、schedule_checkpoint。 |
+| **config 映射** | `resolve_limb_from_openclaw_tool`、`get_channel_from_agent_id`；可选 `openclaw_tool_to_limb`、`openclaw_agent_to_channel`；config.example 与单测已补。 |
+| **OpenClaw Plugin** | `openclaw-plugin/`：TypeScript 插件，register 时注册 before_tool_call / after_tool_call，请求 CLAW_ASSISTANT_URL（默认 localhost:8080）；README 说明安装与构建。 |
+| **验收** | 单测 test_config resolve_limb、get_channel；集成测 test_governance_before_tool_call_allow、_constitution_block、_content_approve_flow、test_governance_after_tool_call；pytest 85 通过。 |
+
 ### Phase 4 方向 A：接 OpenClaw（全量对齐战略）
 
 | 内容 | 说明 | 验收/依赖 |
@@ -439,13 +461,23 @@ claw-assistant/
 | **IM Bot（飞书）** | 审批通知已做（Webhook）；**解析用户审批指令**（事件订阅）→ 调 FastAPI approve/reject，见 [FEISHU-INTEGRATION.md](FEISHU-INTEGRATION.md)。接 OpenClaw 后改为经 Gateway。 | 飞书事件订阅 URL 校验 + 消息解析 |
 | **可收敛扩展** | 复盘建议写回 config、自动调参等可选 | 见「可收敛小步」后续 |
 
+### 已迭代：目标入口小步（目标池存储 + API）
+
+| 内容 | 说明 |
+|------|------|
+| **目标池** | `goals.py`：内存存储，`add_goal(text)`、`list_goals(status?)`、`update_goal_status(id, status)`、`clear_goals()`（测试用）；每项含 id、text、status（pending/done/cancelled）、created_at。 |
+| **API** | `POST /goals`（body: text）新增；`GET /goals?status=` 列表（可选 status 过滤）；`PATCH /goals/{goal_id}`（body: status）更新状态。 |
+| **验收** | 单测 test_goals（add/list/update/clear）；集成测 test_goals_api_post_and_list、test_goals_api_patch_status；pytest 92 通过。 |
+| **后续** | 拆解策略（目标→多条 intent 调用 POST /run）、Dashboard 展示目标列表。 |
+
 ### 下一步规划（当前）
 
+- **Phase 4 OpenClaw 接入（最小形态）**：**当前优先**。按 [OPENCLAW-INTEGRATION.md 当前架构对接设计](OPENCLAW-INTEGRATION.md#当前-openclaw-架构对接设计202621最快速接入) 实现：① FastAPI `POST /governance/before_tool_call`、`POST /governance/after_tool_call`；② agentId→channel 映射与可选 openclaw_tool_to_limb；③ 本仓库提供 OpenClaw 用 TypeScript Plugin（before/after 调我们 HTTP）；④ 配置/文档。审批解挂仍用现有 POST /approve。完成后 main 上工具调用经我们宪法+审批+复盘。
 - **Phase 3**：已全部完成，无待办。**告警**：告警渠道（Webhook）已完成，不再列入近期必做；后续告警扩展为可选。
-- **OpenClaw / IM Bot**：仍在**准备中**，暂不列入近期必做；准备就绪后再按方向 A 或飞书事件订阅排期。**OpenClaw 集成方案**（角色分工、claw-assistant 改为 Plugin、实施顺序、依赖与风险）见 [docs/OPENCLAW-INTEGRATION.md](OPENCLAW-INTEGRATION.md)。
+- **OpenClaw 全量（方向 A）**：治理桥跑通后再做 Gateway exec.approval.resolve、B→A 能力上线、Limb 注册为 HTTP Tool 等，见 [OPENCLAW-INTEGRATION.md](OPENCLAW-INTEGRATION.md)。
 - **IM 选型**：**飞书先行**；钉钉、Discord 等为可选适配，代码侧已预留接口（IMNotifier、get_notifier），待做时按同一接口实现。
 - **飞书集成测试**：调研飞书需提供哪些东西来做集成测试见 [FEISHU-INTEGRATION.md](FEISHU-INTEGRATION.md)（含「集成测试所需清单」）；后端待实现：POST /feishu/events（URL 校验 + 消息解析 → approve/reject）。
-- **Phase 4 可做项（不接 OpenClaw 先收敛）**：① 审批策略收紧（文档 + governance.approval_only_critical）**已完成**；② B→A 上线小步（晋升 API + main 白名单） ③ 目标入口小步（目标池 + 拆解） ④ 飞书解析用户审批指令（事件订阅）。
+- **Phase 4 可做项（不接 OpenClaw 先收敛）**：① 审批策略收紧 **已完成**；② **目标入口小步**：目标池存储 + API **已完成**，后续为拆解策略（目标→intent）+ Dashboard 展示目标列表；③ B→A 上线小步（晋升 API + main 白名单）；④ 飞书解析用户审批指令（事件订阅）。
 - **Dashboard 可选项**：convergence（可收敛建议）、复盘、时间轴等区块可配置显示/隐藏，见「已迭代：Dashboard 可选项」。
 - **多环境协作**：本机小步开发、家里/云服务器飞书联调见 [docs/DEV-WORKFLOW.md](DEV-WORKFLOW.md)。
 - **可选**：可收敛扩展（写回 config/自动调参）；Limb 实装（Content 接真实发布 API）。
