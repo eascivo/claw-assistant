@@ -467,3 +467,27 @@ async def test_goals_api_get_intents_404(app) -> None:
     async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
         r = await client.get("/goals/no-such-id/intents")
     assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_goals_api_get_intents_split() -> None:
+    """当 config.goals.expand_strategy=split 且 expand_split_by 配置时，GET /goals/:id/intents 返回多条。"""
+    from claw_assistant.goals import clear_goals
+    from claw_assistant.server.app import create_app
+
+    from tests.conftest import TEST_CONFIG
+
+    config = {
+        **TEST_CONFIG.copy(),
+        "goals": {"expand_strategy": "split", "expand_split_by": ["、", "；"]},
+    }
+    app = create_app(config=config)
+    clear_goals()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=10.0) as client:
+        r = await client.post("/goals", json={"text": "一、二、三"})
+        assert r.status_code == 200
+        goal_id = r.json()["id"]
+        r2 = await client.get(f"/goals/{goal_id}/intents")
+    assert r2.status_code == 200
+    assert r2.json()["intents"] == ["一", "二", "三"]

@@ -195,11 +195,12 @@ def create_app(config: dict[str, Any] | None = None) -> FastAPI:
 
     @app.get("/goals/{goal_id}/intents")
     async def api_goals_intents(goal_id: str) -> dict[str, Any]:
-        """将目标拆解为 intent 列表（占位：当前返回单条 = 目标原文）。供定时/手动调用后对每条 intent 调 POST /run。"""
+        """将目标拆解为 intent 列表（支持 config goals.expand_strategy=split 按分隔符拆）。供定时/手动调用后对每条 intent 调 POST /run。"""
+        run_config = getattr(app.state, "config", None) or load_config()
         goal = goals_get_goal(goal_id)
         if not goal:
             raise HTTPException(status_code=404, detail="goal not found")
-        intents = goals_expand_to_intents(goal.get("text", ""))
+        intents = goals_expand_to_intents(goal.get("text", ""), run_config)
         return {"intents": intents}
 
     class ApproveBody(BaseModel):

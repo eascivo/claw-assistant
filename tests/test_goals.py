@@ -80,8 +80,26 @@ def test_get_goal() -> None:
 
 
 def test_expand_goal_to_intents_placeholder() -> None:
-    """拆解策略占位：目前返回单条 intent = 目标原文。"""
+    """无 config 或 passthrough 时返回单条 intent = 目标原文。"""
     intents = expand_goal_to_intents("本周完成内容发布")
     assert intents == ["本周完成内容发布"]
     assert expand_goal_to_intents("  a  ") == ["a"]
     assert expand_goal_to_intents("") == []
+    assert expand_goal_to_intents("x", {}) == ["x"]
+    assert expand_goal_to_intents("x", {"goals": {"expand_strategy": "passthrough"}}) == ["x"]
+
+
+def test_expand_goal_to_intents_split() -> None:
+    """expand_strategy=split 且 expand_split_by 配置时按分隔符拆成多条。"""
+    config = {"goals": {"expand_strategy": "split", "expand_split_by": ["、", "；"]}}
+    assert expand_goal_to_intents("A、B、C", config) == ["A", "B", "C"]
+    assert expand_goal_to_intents("一；二；三", config) == ["一", "二", "三"]
+    assert expand_goal_to_intents("  a 、 b ； c  ", config) == ["a", "b", "c"]
+    assert expand_goal_to_intents("单条", config) == ["单条"]
+    assert expand_goal_to_intents("", config) == []
+
+
+def test_expand_goal_to_intents_split_empty_separators() -> None:
+    """expand_split_by 为空或缺失时按 passthrough 处理。"""
+    config = {"goals": {"expand_strategy": "split", "expand_split_by": []}}
+    assert expand_goal_to_intents("A、B", config) == ["A、B"]

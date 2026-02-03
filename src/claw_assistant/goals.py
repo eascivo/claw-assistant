@@ -1,5 +1,6 @@
 """目标池（内存存储）：人类偶发设定的目标列表，供后续拆解为 intent 调用 POST /run。"""
 
+import re
 import time
 import uuid
 from typing import Any
@@ -37,11 +38,26 @@ def list_goals(status: str | None = None) -> list[dict[str, Any]]:
     return sorted(out, key=lambda x: x.get("created_at", 0), reverse=True)
 
 
-def expand_goal_to_intents(goal_text: str) -> list[str]:
-    """将目标拆解为 intent 列表（占位：当前返回单条 = 目标原文，后续可接规则或 LLM）。"""
+def expand_goal_to_intents(goal_text: str, config: dict[str, Any] | None = None) -> list[str]:
+    """
+    将目标拆解为 intent 列表。
+    - config 无或 goals.expand_strategy 非 "split"：返回单条 = 目标原文（passthrough）。
+    - goals.expand_strategy == "split" 且 goals.expand_split_by 非空：按分隔符拆成多条，每段 strip 后非空即一条。
+    """
     text = (goal_text or "").strip()
     if not text:
         return []
+    goals_cfg = (config or {}).get("goals") or {}
+    strategy = goals_cfg.get("expand_strategy") or "passthrough"
+    split_by = goals_cfg.get("expand_split_by")
+    if strategy == "split" and split_by and isinstance(split_by, list) and len(split_by) > 0:
+        separators = [str(s) for s in split_by if s]
+        if not separators:
+            return [text]
+        pattern = "|".join(re.escape(s) for s in separators)
+        parts = re.split(pattern, text)
+        intents = [p.strip() for p in parts if p.strip()]
+        return intents if intents else [text]
     return [text]
 
 

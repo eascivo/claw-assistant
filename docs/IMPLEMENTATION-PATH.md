@@ -461,16 +461,16 @@ claw-assistant/
 | **IM Bot（飞书）** | 审批通知已做（Webhook）；**解析用户审批指令**（事件订阅）→ 调 FastAPI approve/reject，见 [FEISHU-INTEGRATION.md](FEISHU-INTEGRATION.md)。接 OpenClaw 后改为经 Gateway。 | 飞书事件订阅 URL 校验 + 消息解析 |
 | **可收敛扩展** | 复盘建议写回 config、自动调参等可选 | 见「可收敛小步」后续 |
 
-### 已迭代：目标入口小步（目标池存储 + API + Dashboard 展示 + 拆解策略占位）
+### 已迭代：目标入口小步（目标池存储 + API + Dashboard 展示 + 拆解策略）
 
 | 内容 | 说明 |
 |------|------|
 | **目标池** | `goals.py`：内存存储，`add_goal(text)`、`get_goal(id)`、`list_goals(status?)`、`update_goal_status(id, status)`、`clear_goals()`（测试用）；每项含 id、text、status（pending/done/cancelled）、created_at。 |
-| **API** | `POST /goals`（body: text）新增；`GET /goals?status=` 列表；`PATCH /goals/{goal_id}` 更新状态；`GET /goals/{goal_id}/intents` 拆解为 intent 列表。 |
-| **拆解策略占位** | `expand_goal_to_intents(goal_text)`：当前返回单条 intent = 目标原文；后续可接规则或 LLM 产出多条。调用方可对返回的每条 intent 调 POST /run。 |
+| **API** | `POST /goals`（body: text）新增；`GET /goals?status=` 列表；`PATCH /goals/{goal_id}` 更新状态；`GET /goals/{goal_id}/intents` 拆解为 intent 列表（受 config 拆解策略影响）。 |
+| **拆解策略** | `expand_goal_to_intents(goal_text, config)`：**passthrough**（默认）单条=目标原文；**split** 时按 `goals.expand_split_by`（如 `["、", "；", "\n"]`）拆成多条。config.example 与单测/集成测已覆盖。后续可接 LLM 拆解。 |
 | **Dashboard 展示** | 态势看板「目标列表」区块：GET /goals、按状态筛选、可配置显示/隐藏。 |
-| **验收** | 单测 test_goals（含 get_goal、expand_goal_to_intents）；集成测 test_goals_api_*、test_goals_api_get_intents；pytest 96 通过。 |
-| **后续** | 拆解策略增强（规则/LLM 产出多条 intent）；定时或手动「目标→intents→POST /run」闭环。 |
+| **验收** | 单测 test_goals（含 expand split/passthrough）；集成测 test_goals_api_*、test_goals_api_get_intents_split；pytest 99 通过。 |
+| **后续** | 可选 LLM 拆解；定时或手动「目标→intents→POST /run」闭环。 |
 
 ### 下一步规划（当前）
 
@@ -479,7 +479,7 @@ claw-assistant/
 - **OpenClaw 全量（方向 A）**：治理桥跑通后再做 Gateway exec.approval.resolve、B→A 能力上线、Limb 注册为 HTTP Tool 等，见 [OPENCLAW-INTEGRATION.md](OPENCLAW-INTEGRATION.md)。
 - **IM 选型**：**飞书先行**；钉钉、Discord 等为可选适配，代码侧已预留接口（IMNotifier、get_notifier），待做时按同一接口实现。
 - **飞书集成测试**：调研飞书需提供哪些东西来做集成测试见 [FEISHU-INTEGRATION.md](FEISHU-INTEGRATION.md)（含「集成测试所需清单」）；后端待实现：POST /feishu/events（URL 校验 + 消息解析 → approve/reject）。
-- **Phase 4 可做项（不接 OpenClaw 先收敛）**：① 审批策略收紧 **已完成**；② **目标入口小步**：目标池 + API + Dashboard + 拆解策略占位（GET /goals/:id/intents）**已完成**，后续可增强拆解或做定时/手动执行闭环；③ B→A 上线小步（晋升 API + main 白名单）；④ 飞书解析用户审批指令（事件订阅）。
+- **Phase 4 可做项（不接 OpenClaw 先收敛）**：① 审批策略收紧 **已完成**；② **目标入口小步**：目标池 + API + Dashboard + 拆解策略（含规则 split）**已完成**，后续可接 LLM 拆解或做定时/手动执行闭环；③ B→A 上线小步（晋升 API + main 白名单）；④ 飞书解析用户审批指令（事件订阅）。
 - **Dashboard 可选项**：convergence（可收敛建议）、复盘、时间轴等区块可配置显示/隐藏，见「已迭代：Dashboard 可选项」。
 - **多环境协作**：本机小步开发、家里/云服务器飞书联调见 [docs/DEV-WORKFLOW.md](DEV-WORKFLOW.md)。
 - **可选**：可收敛扩展（写回 config/自动调参）；Limb 实装（Content 接真实发布 API）。

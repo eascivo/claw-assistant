@@ -45,6 +45,15 @@ channels:
   experimental:
     require_approval: false  # true 则 experimental 也需审批
 
+# 目标拆解策略（GET /goals/:id/intents）：passthrough=单条=目标原文；split=按分隔符拆成多条
+# goals:
+#   expand_strategy: split   # passthrough | split
+#   expand_split_by: ["、", "；", "\n"]  # 仅当 strategy=split 时生效
+
+# OpenClaw 治理桥（Phase 4）：Plugin 调用 /governance/before_tool_call 时用以下映射
+# openclaw_tool_to_limb: { "publish_content": "content", "run_deploy": "ops" }  # OpenClaw 工具名 → 我们 limb
+# openclaw_agent_to_channel: { "main": "main", "brain-research": "experimental" } # agentId → main|experimental
+
 # 可选：未传 tool 时按 intent 推断 limb；列表按顺序匹配，先匹配先返回
 # intent_tool_map:
 #   - pattern: "发布|推送"
